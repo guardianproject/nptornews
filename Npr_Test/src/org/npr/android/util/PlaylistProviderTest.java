@@ -35,7 +35,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
   private PlaylistProvider provider;
   PlaylistHelper mockHelper;
   private SQLiteDatabase db;
-  
+
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -46,7 +46,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
     db = SQLiteDatabase.create(null);
     Context context = new MockContext() {
       @Override
-      public SQLiteDatabase openOrCreateDatabase(String file, int mode, 
+      public SQLiteDatabase openOrCreateDatabase(String file, int mode,
           SQLiteDatabase.CursorFactory factory) {
         return db;
       }
@@ -65,8 +65,19 @@ public class PlaylistProviderTest extends AndroidTestCase {
     provider = new PlaylistProvider();
     provider.attachInfo(context, null);
     MockContentResolver resolver = new MockContentResolver();
-    resolver.addProvider("org.npr.app.Playlist", provider);
+    // Create the authority for the URI, by removing the 'content://' and any
+    // '/' or path part after that.
+    String authority = PlaylistProvider.CONTENT_URI.toString().substring(10);
+    int pos = authority.indexOf('/');
+    if (pos > -1) {
+      authority = authority.substring(0, pos);
+    }
+    resolver.addProvider(authority, provider);
     this.setContext(new IsolatedContext(resolver, context));
+
+    assertTrue(this.getContext() instanceof IsolatedContext);
+    assertTrue(this.getContext().getContentResolver() instanceof MockContentResolver);
+
     mockHelper = new PlaylistHelper(context) {
       @Override
       public synchronized SQLiteDatabase getReadableDatabase() {
@@ -95,7 +106,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
     values.put(Items.PLAY_ORDER, 1);
 
     db.insertOrThrow(PlaylistProvider.TABLE_NAME, Items.NAME, values);
-    
+
     values.clear();
     values.put(Items.NAME, "C");
     values.put(Items.URL, "http://c");
@@ -107,7 +118,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
     assertEquals(3, DatabaseUtils.queryNumEntries(db,
         PlaylistProvider.TABLE_NAME));
   }
-  
+
   public void testGetMaxEmpty() {
     mockHelper.getWritableDatabase();
 
@@ -119,7 +130,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
 
     assertEquals(2, PlaylistProvider.getMax(getContext(), mockHelper));
   }
-  
+
   public void testInsert() {
     ContentValues values = new ContentValues();
     values.put(Items.NAME, "D");
@@ -128,14 +139,14 @@ public class PlaylistProviderTest extends AndroidTestCase {
     values.put(Items.PLAY_ORDER, 2);
     getContext().getContentResolver().insert(PlaylistProvider.CONTENT_URI,
         values);
-    
+
     assertEquals(1, DatabaseUtils.queryNumEntries(db,
         PlaylistProvider.TABLE_NAME));
   }
-  
+
   public void testInsertMultiple() {
     insertRecords();
-    
+
     ContentValues values = new ContentValues();
     values.put(Items.NAME, "D");
     values.put(Items.URL, "http://d");
@@ -143,7 +154,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
     values.put(Items.PLAY_ORDER, 2);
     getContext().getContentResolver().insert(PlaylistProvider.CONTENT_URI,
         values);
-    
+
     assertEquals(4, DatabaseUtils.queryNumEntries(db,
         PlaylistProvider.TABLE_NAME));
   }
