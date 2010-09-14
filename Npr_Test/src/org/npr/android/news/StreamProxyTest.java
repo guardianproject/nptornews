@@ -26,8 +26,8 @@ import android.util.Log;
  * 
  * @author jeremywadsack
  */
-public class StreamProxyTests extends AndroidTestCase {
-  private static final String TAG = StreamProxyTests.class.getName();
+public class StreamProxyTest extends AndroidTestCase {
+  private static final String TAG = StreamProxyTest.class.getName();
 
   /*
    * Most android devices are not on a named host. So the default implementation

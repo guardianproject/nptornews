@@ -57,7 +57,7 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
 
       // listen to our file
       PlaylistEntry entry = new PlaylistEntry(-1L, "http://127.0.0.1:"
-          + server.getPort() + "/laser", "Laser Button", false, -1);
+          + server.getPort() + "/one_second_silence_mp3", "Silence", false, -1);
       PlaybackService.setCurrent(entry);
       tester.listen(entry.url);
 
