@@ -14,6 +14,7 @@
 package org.npr.android.news;
 
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -28,6 +29,42 @@ import android.util.Log;
  */
 public class StreamProxyTest extends AndroidTestCase {
   private static final String TAG = StreamProxyTest.class.getName();
+
+  /*
+   * This may only occur in testing (see below) but the proxy server throws a
+   * NullPointerException when opened and closed and no data is sent to it.
+   */
+  public void testShouldNotThrowNPEWhenStreamClosedWithoutContent() {
+    StreamProxy proxy = new StreamProxy();
+    proxy.init();
+    proxy.start();
+    Socket socket = null;
+    UncaughtExceptionHandler oldHandler = Thread
+        .getDefaultUncaughtExceptionHandler();
+    ThreadExceptionHandler newHandler = new ThreadExceptionHandler();
+    Thread.setDefaultUncaughtExceptionHandler(newHandler);
+    try {
+      socket = new Socket(
+          InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), 
+          proxy.getPort());
+    } catch (Exception e) {
+      fail(e.getClass().getSimpleName() + ":" + e.getMessage());
+    } finally {
+      if (socket != null) {
+        try {
+          socket.close();
+        } catch (IOException e) {
+          Log.w(TAG, e.getClass().getSimpleName() + ":" + e.getMessage());
+        }
+      }
+      proxy.stop();
+      Thread.setDefaultUncaughtExceptionHandler(oldHandler);
+      assertFalse(
+          "Proxy isn't checking for null content when reading from buffer.",
+          newHandler.caughtNPE);
+
+    }
+  }
 
   /*
    * Most android devices are not on a named host. So the default implementation
@@ -47,8 +84,9 @@ public class StreamProxyTest extends AndroidTestCase {
               .getPort());
       assertTrue("Socket connected.", socket.isConnected());
     } catch (UnknownHostException e) {
-      fail(e.getClass().getSimpleName() + ":" + e.getMessage());
-    } catch (IOException e) {
+      fail("Proxy is not running on localhost. " + e.getClass().getSimpleName()
+          + ":" + e.getMessage());
+    } catch (Exception e) {
       fail(e.getClass().getSimpleName() + ":" + e.getMessage());
     } finally {
       if (socket != null) {
@@ -86,6 +124,20 @@ public class StreamProxyTest extends AndroidTestCase {
     } finally {
       if (started) {
         proxy.stop();
+      }
+    }
+  }
+
+  // ------------------
+  // Test helpers
+
+  private class ThreadExceptionHandler implements UncaughtExceptionHandler {
+    public boolean caughtNPE = false;
+
+    @Override
+    public void uncaughtException(Thread thread, Throwable ex) {
+      if (ex instanceof NullPointerException) {
+        caughtNPE = true;
       }
     }
   }
