@@ -14,32 +14,36 @@
 
 package org.npr.android.test;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.net.URLDecoder;
-import java.net.UnknownHostException;
-import java.util.StringTokenizer;
-
-import org.apache.http.HttpStatus;
-import org.apache.http.ProtocolVersion;
-import org.apache.http.message.BasicStatusLine;
-
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.util.Log;
 
-public class HttpRawResourceServer implements Runnable {
+import java.io.IOException;
+import java.io.InputStream;
+
+// TODO: This is a test framework piece and therefore needs a unit-test.
+
+/**
+ * A single-connection HTTP server that will respond to requests 
+ * for files and pull them from the application's res/raw folder.
+ * 
+ * Here's a simple example of how to use it. Assume that there is 
+ * a file in the package called res/raw/image.jpg
+ * <code>
+ *   HttpRawResourceServer server = new HttpRawResourceServer(getContext());
+ *   try {
+ *     server.init()
+ *     server.start();
+ *     
+ *     String url = "http://127.0.0.1:" + server.getPort() + "/image";
+ *     // Send a request to the URL, perhaps with HttpClent or with File.open(url);
+ *   } finally {
+ *     server.stop();
+ *   }
+ * </code>
+ */
+public class HttpRawResourceServer extends HttpServer {
   private static final String TAG = HttpRawResourceServer.class.getName();
-  private int port = 0;
-  private boolean isRunning = true;
-  private ServerSocket socket;
-  private Thread thread;
   private Context resourceContext;
 
   /**
@@ -56,169 +60,73 @@ public class HttpRawResourceServer implements Runnable {
    * 
    * @param context
    *          The Android application context. Used to access resources.
+   * @param streaming
+   *          Whether the server will continuously stream the content.
    */
-  public HttpRawResourceServer(Context context) {
+  public HttpRawResourceServer(Context context, boolean streaming) {
     if (context == null) {
       throw new IllegalArgumentException(
           "Context for accessing resources cannot be null");
     }
+    setSimulateStream(streaming);
     resourceContext = context;
   }
 
   /**
-   * Returns the port that the server is running on. The host is localhost
-   * (127.0.0.1).
-   * 
-   * @return A port number assigned by the OS.
+   * Creates a RawResourceDataSource object for the request.
+   * @return A <code>DataSource</code> subclass for the raw resource request. 
    */
-  public int getPort() {
-    return port;
-  }
-
-  /**
-   * Prepare the server to start.
-   * 
-   * This only needs to be called once per instance. Once initialized, the
-   * server can be started and stopped as needed.
-   */
-  public void init() {
-    try {
-      socket = new ServerSocket(port, 0, InetAddress.getByAddress(new byte[] {
-          127, 0, 0, 1 }));
-      socket.setSoTimeout(5000);
-      port = socket.getLocalPort();
-      Log.d(TAG, "Server stated at " + socket.getInetAddress().getHostAddress()
-          + ":" + port);
-    } catch (UnknownHostException e) {
-      Log.e(TAG, "Error initializing server", e);
-    } catch (IOException e) {
-      Log.e(TAG, "Error initializing server", e);
-    }
-  }
-
-  /**
-   * Start the server.
-   */
-  public void start() {
-    thread = new Thread(this);
-    thread.start();
-  }
-
-  /**
-   * Stop the server.
-   * 
-   * This stops the thread listening to the port. It may take up to five seconds
-   * to close the service and this call blocks until that occurs.
-   */
-  public void stop() {
-    isRunning = false;
-    if (thread == null) {
-      Log.w(TAG, "Server was stopped without being started.");
-      return;
-    }
-    Log.d(TAG, "Stopping server.");
-    thread.interrupt();
-    try {
-      thread.join(5000);
-    } catch (InterruptedException e) {
-      Log.w(TAG, "Server was interrupted while stopping", e);
-    }
-  }
-
   @Override
-  public void run() {
-    Log.d(TAG, "running");
-    while (isRunning) {
-      try {
-        Socket client = socket.accept();
-        if (client == null) {
-          continue;
-        }
-        Log.d(TAG, "client connected");
-
-        processRequest(readRequest(client), client);
-      } catch (SocketTimeoutException e) {
-        // Do nothing
-      } catch (IOException e) {
-        Log.e(TAG, "Error connecting to client", e);
-      }
-    }
-    Log.d(TAG, "Proxy interrupted. Shutting down.");
-  }
-
-  private int readRequest(Socket client) {
-
-    InputStream is;
-    String firstLine;
-    try {
-      is = client.getInputStream();
-      // We really don't need 8k (default) buffer (it throws a warning)
-      // 2k is big enough: http://www.boutell.com/newfaq/misc/urllength.html
-      BufferedReader reader = new BufferedReader(new InputStreamReader(is),
-          2048);
-      firstLine = reader.readLine();
-    } catch (IOException e) {
-      Log.e(TAG, "Error parsing request from client", e);
-      return -1;
-    }
-
-    StringTokenizer st = new StringTokenizer(firstLine);
-    st.nextToken(); // Skip method
-    String uri = st.nextToken();
-    String path = URLDecoder.decode(uri.substring(1));
+  protected DataSource getData(String request) {
+    // Remove initial '/' in path
+    String path = request.substring(1);
     // TODO: remove any extensions
-    Log.d(TAG, "GET request: " + uri + " -> " + path);
-    String resPath = String.format("%3$s:%2$s/%1$s", path, "raw",
-        resourceContext.getPackageName());
-    Log.d(TAG, "Resource: " + resPath);
-    return resourceContext.getResources().getIdentifier(resPath, null, null);
+    Log.d(TAG, "GET request: " + request + " -> " + path);
+    return new RawResourceDataSource(path);
   }
-
-  private void processRequest(int id, Socket client)
-      throws IllegalStateException, IOException {
-    if (id <= 0) {
-      Log.e(TAG, "Inavlid resource ID: " + id);
-      client.close();
-      return;
+  
+  
+  
+  protected class RawResourceDataSource extends DataSource {
+    private AssetFileDescriptor fd;
+    private int resourceId;
+    
+    public RawResourceDataSource(String resourceName) {
+      String resPath = String.format("%3$s:%2$s/%1$s", resourceName, "raw",
+          resourceContext.getPackageName());
+      Log.d(TAG, "Resource: " + resPath);
+      resourceId = resourceContext.getResources().getIdentifier(resPath, null, null);
     }
 
-    Log.d(TAG, "getting file");
-    AssetFileDescriptor fd = resourceContext.getResources().openRawResourceFd(
-        id);
+    @Override
+    public InputStream createInputStream() throws IOException {
+      // NB: Because createInputStream can only be called once per asset 
+      // we always create a new file descriptor here.
+      getFileDescriptor();
+      return fd.createInputStream();
+    }
 
-    Log.d(TAG, "setting response headers");
-    StringBuilder httpString = new StringBuilder();
-    httpString.append(new BasicStatusLine(new ProtocolVersion("HTTP", 1, 1),
-        HttpStatus.SC_OK, "OK"));
-    httpString.append("\n");
-
-    httpString.append("Content-Type: audio/MP3");
-    httpString.append("\n");
-    httpString.append("Content-Length: " + fd.getLength());
-    httpString.append("\n");
-
-    httpString.append("\n");
-    Log.d(TAG, "headers done");
-
-    InputStream data = fd.createInputStream();
-    try {
-      byte[] buffer = httpString.toString().getBytes();
-      int readBytes = -1;
-      Log.d(TAG, "writing to client");
-      client.getOutputStream().write(buffer, 0, buffer.length);
-
-      // Start sending content.
-      byte[] buff = new byte[1024 * 50];
-      while (isRunning && (readBytes = data.read(buff, 0, buff.length)) != -1) {
-        client.getOutputStream().write(buff, 0, readBytes);
+    @Override
+    public String getContentType() {
+      // TODO: Support other media if we need to
+      return "audio/mp3";
+    }
+    
+    @Override
+    public long getContentLength() {
+      if( isSimulatingStream() ) {
+        super.getContentLength();
       }
-    } catch (Exception e) {
-      Log.e(TAG, "Error streaming file content", e);
-    } finally {
-      if (data != null) {
-        data.close();
+      if (fd == null) {
+        getFileDescriptor();
       }
-      client.close();
+      return fd.getLength();      
+    }
+    
+    
+    private void getFileDescriptor() {
+      Log.d(TAG, "getting file");
+      fd = resourceContext.getResources().openRawResourceFd(resourceId);
     }
   }
 
