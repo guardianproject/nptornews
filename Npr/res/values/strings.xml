@@ -1,85 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">NPR News</string>
-    <string name="checkbox"></string>
-    <string name="ringtone"></string>
-    
-    <string name="msg_load_more">Load more stories...</string>
+  <string name="app_name">NPR News</string>
 
-    <string name="msg_station_list_intro">Locate stations</string>
-    <string name="msg_station_search">Locate stations</string>
-    <string name="msg_station_search_by_local">Local stations</string>
-    <string name="msg_station_search_by_other">Call sign or zip code</string>
-    <string name="msg_station_search_now">Search!</string>
-    <string name="msg_station_podcasts">Podcasts</string>
-    <string name="msg_station_streams">Streams</string>
-    
-    <string name="msg_refresh">Refresh</string>
+  <string name="msg_load_more">Load more stories...</string>
 
-    <string name="msg_main_logo">Home</string>
-    <string name="msg_main_subactivity_news">Top Stories</string>
-    <string name="msg_main_subactivity_topics">Topics</string>
-    <string name="msg_main_subactivity_programs">Programs</string>
-    <string name="msg_main_subactivity_stations">Stations</string>
-    <string name="msg_main_subactivity_search">Search</string>
-    <string name="msg_main_subactivity_nowplaying">Now Playing</string>
-    <string name="msg_main_subactivity_hourly">Hourly News Summary</string>
-    
-    <string name="msg_main_menu_about">About</string>
-    <string name="msg_main_check_connection">Check connection and try again</string>
-    
-    <string name="msg_share_story">Share this story</string>
-    
-    <string name="msg_listen_nothing">Not playing</string>
-    <string name="msg_listen_playlist">Playlist</string>
-    <string name="msg_listen_now">Listen Now</string>
-    <string name="msg_listen_later">Add to Playlist</string>
-    
-    <string name="msg_playlist_clear">Clear</string>
-    <string name="msg_playlist_unread">Active</string>
-    <string name="msg_playlist_read">Listened to</string>
-    <string name="msg_playlist_title">Playlist</string>
-    
-    <string name="msg_podcast_dialog_title">Listen to podcast?</string>
-    <string name="msg_podcast_listen_now">Now</string>
-    <string name="msg_podcast_enqueue">Later</string>
-    <string name="msg_podcast_cancel">Cancel</string>
-    
-    <string name="msg_search_title">Search results</string>
-    <string name="msg_search_description">Search by date and keywords</string>
-    <string name="msg_search_button">Search!</string>
-    <string name="msg_search_start_date">Start date</string>
-    <string name="msg_search_end_date">End date</string>
-    <string name="msg_search_term">Search terms</string>
-    <string name="msg_search_hint">e.g. Barack Obama</string>
-    
-    <string name="msg_eula_accept">Accept</string>
-    <string name="msg_eula_refuse">Refuse</string>
-    <string name="msg_eula_title">End User License Agreement</string>
-    
-    <string name="msg_about_developer">Developed by</string>
-    <string name="msg_about_developer_value">
-        &lt;br>Michael Frederick
-        &lt;br>Thomas Wilburn
-        &lt;br>Marsh Gosnell</string>
-    
-    <string name="msg_about_contact">Contact</string>
-    <string name="msg_about_contact_value">npr-android@googlegroups.com</string>
-    <string name="msg_about_version_name">Version name</string>
-    <string name="msg_about_version_code">Version code</string>
-    <string name="msg_about_description">NPR is an award-winning, multimedia news organization and an influential force in American life. In collaboration with more than 880 independent public radio stations nationwide, NPR strives to create a more informed public: one challenged and invigorated by a deeper understanding and appreciation of events, ideas and cultures. NPR produces and/or distributes radio programs that are heard by 27.5 million people each week. With more than 90 podcasts, NPR is the most successful podcaster among American media companies. Its 24/7 NPR Worldwide program stream reaches listeners in more than 100 countries. NPR Music, in partnership with leading music stations, is a free music discovery web site that offers live performances, studio sessions, first listens to new albums, blogs and features spanning all music genres. Since its launch in 1970, NPR has become a leader in representation and technology development in the public media community, assuring that the unique mission of nonprofit public media is preserved and grows.</string>
-    <string name="msg_about_feedback">Send Feedback</string>
-    <string name="msg_about_privacy">Privacy</string>
-    <string name="msg_about_terms">Terms</string>
+  <string name="msg_refresh">Refresh</string>
 
-    <string name="msg_error">Error</string>
-    <string name="msg_ok">Ok</string>
-    <string name="msg_parse_error">There was an error retrieving the requested resource.</string>
+  <string name="msg_main_logo">Home</string>
+  <string name="msg_main_section_news">News</string>
+  <string name="msg_main_subactivity_top_stories">Top Stories</string>
+  <string name="msg_main_subactivity_topics">By Topic</string>
+  <string name="msg_main_subactivity_hourly">Hourly News Summary</string>
+  <string name="msg_main_section_programs">Programs</string>
+  <string name="msg_main_subactivity_programs">All Programs</string>
+  <string name="msg_main_section_stations">Stations</string>
+  <string name="msg_main_subactivity_favorite_stations">Favorite
+    Stations</string>
+  <string name="msg_main_subactivity_all_stations">All Stations</string>
+  <string name="msg_main_subactivity_locate_stations">Locate Stations</string>
+  <string name="msg_main_subactivity_live_streams">Live Streams</string>
+  <string name="msg_main_subactivity_search">Search</string>
+  <string name="msg_main_subactivity_nowplaying">Now Playing</string>
+  <string name="msg_main_section_other">Other</string>
 
-    <string name="msg_api_key_error">
-To run the NPR app register for an account at <a href="http://npr.org/api">npr.org/api</a>.
-Then login, go to \"Manage\" and click \"Generate Key.\"
-Paste the key into res/raw/api_key.txt
-</string>
-    <string name="msg_item_added_to_playlist">Item added to playlist</string>
+  <string name="msg_player_now_playing">NOW PLAYING</string>
+  <string name="msg_player_ready_to_play">READY TO PLAY</string>
+  <string name="msg_player_nothing_to_play">NO STORIES TO PLAY</string>
+
+  <string name="msg_main_menu_about">About</string>
+
+  <string name="msg_playback_error">Unable to play media. Moving to the
+    next item.</string>
+  <string name="msg_check_connection">Check connection and try again.</string>
+
+  <string name="msg_share_story">Share this story</string>
+
+  <string name="msg_listen_nothing">Not playing</string>
+  <string name="msg_listen_playlist">Playlist</string>
+  <string name="msg_listen_now">Listen now</string>
+  <string name="msg_listen_later">Playlist</string>
+  <string name="msg_share">Share</string>
+
+  <string name="msg_playlist_clear">Clear</string>
+  <string name="msg_playlist_unread">Active</string>
+  <string name="msg_playlist_read">Listened to</string>
+  <string name="msg_playlist_title">Playlist</string>
+
+  <string name="msg_podcast_stream_header">Audio Streams</string>
+
+  <string name="msg_search_start_date">Start date</string>
+  <string name="msg_search_end_date">End date</string>
+  <string name="msg_search_hint">keyword</string>
+  <string name="msg_search_term">Search terms</string>
+  <string name="msg_searchable_hint">Search stories &amp; programs</string>
+
+  <string name="msg_search_results_title">Search Results</string>
+
+  <string name="msg_eula_accept">Accept</string>
+  <string name="msg_eula_refuse">Refuse</string>
+  <string name="msg_eula_title">End User License Agreement</string>
+
+  <string name="msg_about_title">About NPR</string>
+  <string name="msg_about_developer">Developed by</string>
+  <string name="msg_about_developer_value">Michael Frederick, Thomas Wilburn,
+    Marsh Gosnell, Jeremy Wadsack, Justin Friberg
+  </string>
+  <string name="msg_about_designer">Designed by</string>
+  <string name="msg_about_designer_value">Paulo Lopez and Chris Koth with
+    help from Max Pfennighaus and Vince Farquharson</string>
+  <string name="msg_about_producer">Produced by</string>
+  <string name="msg_about_producer_value">Jeremy Pennycook</string>
+
+  <string name="msg_about_learn_more">Learn more</string>
+  <string name="msg_about_learn_more_value">http://npr.org/android</string>
+
+  <string name="msg_about_contact">Email</string>
+  <string name="msg_about_contact_value">npr-android@googlegroups.com</string>
+  <string name="msg_about_version_name">Version name</string>
+  <string name="msg_about_version_code">Version code</string>
+  <string name="msg_about_description">NPR is an award-winning, multimedia news
+    organization and an influential force in American life. In collaboration
+    with more than 880 independent public radio stations nationwide, NPR strives
+    to create a more informed public: one challenged and invigorated by a deeper
+    understanding and appreciation of events, ideas and cultures. NPR produces
+    and/or distributes radio programs that are heard by 27.5 million people each
+    week. With more than 90 podcasts, NPR is the most successful podcaster among
+    American media companies. Its 24/7 NPR Worldwide program stream reaches
+    listeners in more than 100 countries. NPR Music, in partnership with leading
+    music stations, is a free music discovery web site that offers live
+    performances, studio sessions, first listens to new albums, blogs and
+    features spanning all music genres. Since its launch in 1970, NPR has become
+    a leader in representation and technology development in the public media
+    community, assuring that the unique mission of nonprofit public media is
+    preserved and grows.
+  </string>
+  <string name="msg_about_feedback">Send Feedback</string>
+  <string name="msg_about_share">Share</string>
+  <string name="msg_about_privacy">Privacy</string>
+  <string name="msg_about_terms">Terms</string>
+  <string name="msg_share_app">Share this application</string>
+
+  <string name="msg_error">Error</string>
+  <string name="msg_ok">Ok</string>
+  <string name="msg_parse_error">There was an error retrieving the requested
+    resource.
+  </string>
+
+  <string name="msg_api_key_error">
+    To run the NPR app register for an account at<a href="http://npr.org/api">
+    npr.org/api</a>.
+    Then login, go to \"Manage\" and click \"Generate Key.\"
+    Paste the key into res/raw/api_key.txt
+  </string>
+  <string name="msg_item_added_to_playlist">Item added to playlist</string>
+  <string name="msg_find_live_stream">Find live stream</string>
+  <string name="msg_add_all_to_playlist">Add all to playlist</string>
+  <string name="msg_clear_playlist">Clear playlist</string>
+  <string name="msg_clear_played_segments">Clear played segments</string>
+  <string name="msg_main_title_topics">News By Topic</string>
+
+  <string name="msg_station_add_favorite">Add this station to
+    Favorites</string>
+  <string name="msg_station_remove_favorite">Remove this station from
+    Favorites</string>
+  <string name="msg_hint_station_search">zip, city/state,
+    or call letters</string>
+  <string name="msg_station_not_found">Oops, it looks like we can\'t
+    find that station.</string>
+  <string name="msg_station_search">Locate</string>
+  <string name="msg_station_find_nearest">Find nearest</string>
+  <string name="msg_station_podcasts">Podcasts</string>
+  <string name="msg_station_streams">Streams</string>
+  <string name="msg_station_search_help">Couldn\'t determine what you
+    are looking for. Try searching for call letter (e.g. WAMU),
+    zip code (e.g. 90210) or city and state (e.g. San Francisco, CA).</string>
+
+
+  <string name="msg_hourly_news_title">Hourly Newscast</string>
+  <string name="msg_hourly_news_subtitle">by NPR</string>
+  <string name="msg_hourly_news_heading">A brief news update at the top of
+    every hour.
+  </string>
+  <string name="menu_read_story">Read story</string>
+  <string name="menu_remove_entry">Remove</string>
+  <string name="msg_story_count_format">%1$d of %2$d stories</string>
+  <string name="msg_no_favorites">You don\'t have any favorite
+    stations. Try searching for stations and add them to the
+    favorites.</string>
+  <string name="msg_stations_found">We couldn\'t find any stations matching
+    your search. Try searching for different terms.</string>
+  <string name="msg_stations_found_nearby">We couldn\'t find any stations
+    nearby. Try enabling your GPS in your settings.</string>
+  <string name="msg_no_live_streams">There don\'t appear to be any live
+    streams for the program you selected. Try looking for another program
+    that is on air.</string>
+  <string name="format_default_station_name">%s Listen Online</string>
+
+  <array name="program_categories">
+    <item>News</item>
+    <item>Arts &amp; Life</item>
+    <item>Music</item>
+    <item>Special Series</item>
+    <item>Other</item>
+  </array>
 </resources>

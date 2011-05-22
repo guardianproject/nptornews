@@ -23,7 +23,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpResponseFactory;
 import org.apache.http.ParseException;
 import org.apache.http.ProtocolVersion;
-import org.apache.http.RequestLine;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
@@ -136,7 +135,8 @@ public class StreamProxy implements Runnable {
     String firstLine;
     try {
       is = client.getInputStream();
-      BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+      BufferedReader reader = new BufferedReader(new InputStreamReader(is),
+          8192);
       firstLine = reader.readLine();
     } catch (IOException e) {
       Log.e(LOG_TAG, "Error parsing request", e);
@@ -213,7 +213,7 @@ public class StreamProxy implements Runnable {
 
     try {
       byte[] buffer = httpString.toString().getBytes();
-      int readBytes = -1;
+      int readBytes;
       Log.d(LOG_TAG, "writing to client");
       client.getOutputStream().write(buffer, 0, buffer.length);
 
@@ -264,16 +264,11 @@ public class StreamProxy implements Runnable {
            }
       } // else within line, don't tolerate whitespace
 
-      if (index + protolength > buffer.length())
-          return false;
+      return index + protolength <= buffer.length() &&
+          buffer.substring(index, index + protolength).equals(ICY_PROTOCOL_NAME);
 
-      return buffer.substring(index, index + protolength).equals(ICY_PROTOCOL_NAME);
-    }
+      }
 
-    @Override
-    public Header parseHeader(CharArrayBuffer buffer) throws ParseException {
-      return super.parseHeader(buffer);
-    }
 
     @Override
     public ProtocolVersion parseProtocolVersion(CharArrayBuffer buffer,
@@ -313,16 +308,9 @@ public class StreamProxy implements Runnable {
     }
 
     @Override
-    public RequestLine parseRequestLine(CharArrayBuffer buffer,
-        ParserCursor cursor) throws ParseException {
-      return super.parseRequestLine(buffer, cursor);
-    }
-
-    @Override
     public StatusLine parseStatusLine(CharArrayBuffer buffer,
         ParserCursor cursor) throws ParseException {
-      StatusLine superLine = super.parseStatusLine(buffer, cursor);
-      return superLine;
+      return super.parseStatusLine(buffer, cursor);
     }
   }
 

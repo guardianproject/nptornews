@@ -3,18 +3,73 @@
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:orientation="vertical"
   android:layout_height="fill_parent"
-  android:layout_width="fill_parent"
-  android:layout_margin="3dip" android:paddingTop="5dip">
-  <Button
-    android:text="@string/msg_station_search"
-    android:id="@+id/StationSearchButton01"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"></Button>
-  
+  android:layout_width="fill_parent">
+  <LinearLayout android:id="@+id/ButtonBar"
+    android:layout_height="wrap_content"
+    android:layout_width="fill_parent"
+    android:gravity="center_vertical"
+    android:padding="10dip"
+    android:background="@drawable/station_search_background"
+    android:orientation="vertical">
+    <LinearLayout
+      android:layout_height="50dp"
+      android:layout_width="fill_parent"
+      android:gravity="center_vertical"
+      android:orientation="horizontal">
+      <Button
+        android:text="@string/msg_station_search"
+        android:id="@+id/StationSearchButton"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginLeft="5dip"
+        android:layout_marginRight="5dip"
+        android:background="@drawable/story_button_background"/>
+      <Button
+        android:text="@string/msg_station_find_nearest"
+        android:id="@+id/StationNearestButton"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginLeft="5dip"
+        android:layout_marginRight="5dip"
+        android:layout_toRightOf="@id/StationSearchButton"
+        android:background="@drawable/story_button_background"/>
+    </LinearLayout>
+    <LinearLayout
+      android:layout_height="wrap_content"
+      android:layout_width="fill_parent"
+      android:orientation="horizontal">
+      <EditText
+        android:id="@+id/StationSearchTerm"
+        android:background="@drawable/textfield_search"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="10dip"
+        android:layout_weight="1"
+        android:hint="@string/msg_hint_station_search"
+        />
+      <ImageButton
+        android:id="@+id/search_go_button"
+        android:background="@drawable/btn_search_dialog"
+        android:src="@drawable/ic_btn_search"
+        android:layout_width="wrap_content"
+        android:layout_height="fill_parent"
+        />
+    </LinearLayout>
+  </LinearLayout>
+
+
+  <TextView
+    android:id="@+id/Empty"
+    android:padding="10dip"
+    android:visibility="gone"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"/>
   <ListView
     android:id="@+id/ListView01"
     android:layout_width="fill_parent"
-    android:layout_height="wrap_content">
-  </ListView>
+    android:layout_height="fill_parent"/>
+
 
 </LinearLayout>

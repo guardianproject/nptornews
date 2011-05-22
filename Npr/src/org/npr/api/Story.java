@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,22 +24,23 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.Map.Entry;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 public class Story extends ApiElement {
   public static final String LOG_TAG = Story.class.getName();
 
   private final String link;
+  private final String shortLink;
   private final String title;
   private final String subtitle;
   private final String shortTitle;
@@ -80,9 +82,7 @@ public class Story extends ApiElement {
 
   public static class Organization {
     private final String id;
-    @SuppressWarnings("unused")
     private final String name;
-    @SuppressWarnings("unused")
     private final String website;
     public Organization(String id, String name, String website) {
       this.id = id;
@@ -91,6 +91,12 @@ public class Story extends ApiElement {
     }
     public String getId() {
       return id;
+    }
+    public String getName() {
+      return name;
+    }
+    public String getWebsite() {
+      return website;
     }
   }
 
@@ -280,7 +286,8 @@ public class Story extends ApiElement {
     }
   }
 
-  public Story(String id, String link, String title, String subtitle,
+  public Story(String id, String link, String shortLink, String title,
+               String subtitle,
       String shortTitle, String teaser, String miniTeaser, String slug,
       String storyDate, String pubDate, String lastModifiedDate,
       String keywords, String priorityKeywords, List<Byline> bylines,
@@ -290,6 +297,7 @@ public class Story extends ApiElement {
       TextWithHtml textWithHtml, List<Parent> parentTopics) {
     super(id);
     this.link = link;
+    this.shortLink = shortLink;
     this.title = title;
     this.subtitle = subtitle;
     this.shortTitle = shortTitle;
@@ -318,6 +326,10 @@ public class Story extends ApiElement {
     return link;
   }
 
+  public String getShortLink() {
+    return shortLink;
+  }
+
   public String getTitle() {
     return title;
   }
@@ -338,12 +350,21 @@ public class Story extends ApiElement {
     return miniTeaser;
   }
 
+  public String getDuration() {
+    List<Audio> audios = getAudios();
+    if (audios.size() == 0) {
+      return null;
+    } else {
+      return audios.get(0).duration;
+    }
+  }
+
   public String getSlug() {
     return slug;
   }
 
   public String getStoryDate() {
-    return storyDate;
+    return storyDate == null ? pubDate : storyDate;
   }
 
   public String getPubDate() {
@@ -414,6 +435,7 @@ public class Story extends ApiElement {
   public static class StoryBuilder {
     private final String id;
     private String link;
+    private String shortLink;
     private String title;
     private String subtitle;
     private String shortTitle;
@@ -425,23 +447,28 @@ public class Story extends ApiElement {
     private String lastModifiedDate;
     private String keywords;
     private String priorityKeywords;
-    private List<Byline> bylines = new LinkedList<Byline>();
-    private List<Thumbnail> thumbnails = new LinkedList<Thumbnail>();
-    private List<Toenail> toenails  = new LinkedList<Toenail>();
-    private List<Organization> organizations  = new LinkedList<Organization>();
-    private List<Audio> audios = new LinkedList<Audio>();
-    private List<Image> images = new LinkedList<Image>();
-    private List<RelatedLink> relatedLinks = new LinkedList<RelatedLink>();
-    private List<PullQuote> pullQuotes = new LinkedList<PullQuote>();
+    private final List<Byline> bylines = new LinkedList<Byline>();
+    private final List<Thumbnail> thumbnails = new LinkedList<Thumbnail>();
+    private final List<Toenail> toenails  = new LinkedList<Toenail>();
+    private final List<Organization> organizations  = new LinkedList<Organization>();
+    private final List<Audio> audios = new LinkedList<Audio>();
+    private final List<Image> images = new LinkedList<Image>();
+    private final List<RelatedLink> relatedLinks = new LinkedList<RelatedLink>();
+    private final List<PullQuote> pullQuotes = new LinkedList<PullQuote>();
     private Text text;
     private TextWithHtml textWithHtml;
-    private List<Parent> parentTopics = new LinkedList<Parent>();
+    private final List<Parent> parentTopics = new LinkedList<Parent>();
 
     public StoryBuilder(String id) {
       this.id = id;
     }
-    public StoryBuilder withLink(String link) {
-      this.link = link;
+    public StoryBuilder withLink(String link, String type) {
+      if (type.equals("html")) {
+        this.link = link;
+      } else if (type.equals("api")) {
+      } else if (type.equals("short")) {
+        this.shortLink = link;
+      }
       return this;
     }
 
@@ -556,23 +583,33 @@ public class Story extends ApiElement {
     }
 
     public Story build() {
-      return new Story(id, link, title, subtitle, shortTitle, teaser,
-          miniTeaser, slug, storyDate, pubDate, lastModifiedDate, keywords,
-          priorityKeywords, bylines, thumbnails, toenails, organizations,
-          audios, images, relatedLinks, pullQuotes, text, textWithHtml,
-          parentTopics);
+      return new Story(id, link, shortLink, title, subtitle, shortTitle,
+        teaser,
+        miniTeaser, slug, storyDate, pubDate, lastModifiedDate, keywords,
+        priorityKeywords, bylines, thumbnails, toenails, organizations,
+        audios, images, relatedLinks, pullQuotes, text, textWithHtml,
+        parentTopics);
     }
 
   }
 
   public static class StoryFactory {
     public static List<Story> parseStories(Node rootNode) {
-      LinkedList<Story> result = new LinkedList<Story>();
-      NodeList childNodes = rootNode.getChildNodes();
-      for (Node node : new IterableNodeList(childNodes)) {
-        if (node.getNodeName().equals("list")) {
-          for (Node storyNode : new IterableNodeList(node.getChildNodes())) {
-            Story story = createStory(storyNode);
+      if (rootNode.getNodeName().equals("rss")) {
+        return parseRssStoryList(rootNode);
+      }
+
+      return parseNprmlStoryList(rootNode);
+    }
+
+    private static List<Story> parseRssStoryList(Node rootNode) {
+      List<Story> result = new ArrayList<Story>();
+
+      for (Node channelNode : new IterableNodeList(rootNode.getChildNodes())) {
+        if (channelNode.getNodeName().equals("channel")) {
+          for (Node childNode :
+              new IterableNodeList(channelNode.getChildNodes())) {
+            Story story = createRssStory(childNode);
             if (story != null) {
               result.add(story);
             }
@@ -582,7 +619,60 @@ public class Story extends ApiElement {
       return result;
     }
 
-    private static Story createStory(Node node) {
+    private static List<Story> parseNprmlStoryList(Node rootNode) {
+      LinkedList<Story> result = new LinkedList<Story>();
+      NodeList childNodes = rootNode.getChildNodes();
+      for (Node node : new IterableNodeList(childNodes)) {
+        if (node.getNodeName().equals("list")) {
+          for (Node storyNode : new IterableNodeList(node.getChildNodes())) {
+            Story story = createNprmlStory(storyNode);
+            if (story != null) {
+              result.add(story);
+            }
+          }
+        }
+      }
+      return result;
+    }
+
+
+    private static Story createRssStory(Node node) {
+      if (!node.getNodeName().equals("item") ||
+          !node.hasChildNodes()) {
+        return null;
+      }
+
+      StoryBuilder sb = new StoryBuilder(
+          // Create an ID because podcast items don't have any
+          Long.toHexString(new Date().getTime() * 1000 + (long)(Math.random()
+              * 1000))
+      );
+
+      try {
+        for (Node n : new IterableNodeList(node.getChildNodes())) {
+          String nodeName = n.getNodeName();
+          if (nodeName.equals("title")) {
+            sb.withTitle(NodeUtils.getTextContent(n));
+          } else if (nodeName.equals("link")) {
+            sb.withLink(NodeUtils.getTextContent(n), "html");
+          } else if (nodeName.equals("description")) {
+            sb.withTeaser(NodeUtils.getTextContent(n));
+          } else if (nodeName.equals("pubDate")) {
+            sb.withPubDate(NodeUtils.getTextContent(n));
+          } else if (nodeName.equals("enclosure")) {
+            sb.withAudio(parsePodcastEnclosure(n));
+          }
+        }
+      } catch (Exception e) {
+        Log.e(LOG_TAG, "", e);
+        return null;
+      }
+
+      return sb.build();
+    }
+
+
+    private static Story createNprmlStory(Node node) {
       if (!node.getNodeName().equals("story") ||
           !node.hasChildNodes()) {
         return null;
@@ -600,6 +690,9 @@ public class Story extends ApiElement {
           }
           if (nodeName.equals("title")) {
             sb.withTitle(NodeUtils.getTextContent(n));
+          } else if (nodeName.equals("link")) {
+            Attr typeAttr = (Attr) n.getAttributes().getNamedItem("type");
+            sb.withLink(NodeUtils.getTextContent(n), typeAttr.getValue());
           } else if (nodeName.equals("teaser")) {
             sb.withTeaser(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("miniTeaser")) {
@@ -675,7 +768,8 @@ public class Story extends ApiElement {
         String nodeName = n.getNodeName();
         if (nodeName.equals("name")) {
           name = NodeUtils.getTextContent(n);
-        } else if (nodeName.equals("link")) {
+        }
+        else if (nodeName.equals("link")) {
           Attr typeAttr = (Attr) n.getAttributes().getNamedItem("type");
           if (typeAttr != null) {
             String type = typeAttr.getValue();
@@ -749,6 +843,26 @@ public class Story extends ApiElement {
       return new Audio(id, primary, duration, formats);
     }
 
+    private static Audio parsePodcastEnclosure(Node node) {
+      String url = null, duration = null;
+      List<Audio.Format> formats = new ArrayList<Audio.Format>();
+      Attr urlAttr = (Attr) node.getAttributes().getNamedItem("url");
+      if (urlAttr != null) {
+        url = urlAttr.getValue();
+      }
+      Attr durationAttr = (Attr) node.getAttributes().getNamedItem("duration");
+      if (durationAttr != null) {
+        duration = durationAttr.getValue();
+      }
+      Attr typeAttr = (Attr) node.getAttributes().getNamedItem("type");
+      if (typeAttr != null && url != null) {
+        if (typeAttr.getValue().equals("audio/mpeg")) {
+          formats.add(new Audio.Format(url, null, null));
+        }
+      }
+      return new Audio(null, "primary", duration, formats);
+    }
+
     private static Audio.Format parseFormat(Node node) {
       String mp3 = null, wm = null, rm = null;
 
@@ -793,5 +907,27 @@ public class Story extends ApiElement {
       List<Story> result = parseStories(stories);
       return result.size() > 0 ? result.get(0) : null;
     }
+  }
+
+  public Audio getPlayable() {
+    for (Audio a : getAudios()) {
+      if (a.getType().equals("primary")) {
+        return a;
+      }
+    }
+    return null;
+  }
+
+  public String getPlayableUrl() {
+    String url = null;
+    Story.Audio a = getPlayable();
+    if (a != null) {
+      for (Story.Audio.Format f : a.getFormats()) {
+        if ((url = f.getMp3()) != null) {
+          break;
+        }
+      }
+    }
+    return url;
   }
 }

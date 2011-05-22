@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,37 +17,36 @@ package org.npr.android.news;
 
 import android.app.DatePickerDialog;
 import android.app.DatePickerDialog.OnDateSetListener;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ImageButton;
 
 import org.npr.android.util.Tracker;
 import org.npr.android.util.Tracker.ActivityMeasurement;
-import org.npr.api.ApiConstants;
-import org.npr.api.Story;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-public class SearchActivity extends PlayerActivity implements
-    OnClickListener {
+public class SearchActivity extends TitleActivity implements
+    OnClickListener, View.OnKeyListener {
   private EditText searchText;
   private Calendar startDate;
   private Calendar endDate;
   private Button startDateButton;
   private Button endDateButton;
-  private SimpleDateFormat dateFormat = new SimpleDateFormat("d MMM yyyy");
+  private final SimpleDateFormat dateFormat =
+      new SimpleDateFormat("MMMM d, yyyy");
+  private InputMethodManager inputMethodManager;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -55,57 +55,64 @@ public class SearchActivity extends PlayerActivity implements
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.search, container);
 
-    searchText = (EditText) findViewById(R.id.EditText01);
+    searchText = (EditText) findViewById(R.id.SearchText);
+    searchText.setOnKeyListener(this);
+    inputMethodManager =
+        (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+    // only will trigger it if no physical keyboard is open
+    if (inputMethodManager != null) {
+      inputMethodManager.showSoftInput(searchText,
+          InputMethodManager.SHOW_IMPLICIT);
+    }
 
-    Date start = new Date();
+    ImageButton searchButton =
+        (ImageButton) findViewById(R.id.search_go_button);
+    searchButton.setOnClickListener(this);
+
+
     endDate = new GregorianCalendar();
     startDate = (Calendar) endDate.clone();
     startDate.add(Calendar.DATE, -7);
 
-    Button searchButton = (Button) findViewById(R.id.SearchButton);
     startDateButton = (Button) findViewById(R.id.StartDateButton);
     endDateButton = (Button) findViewById(R.id.EndDateButton);
     startDateButton.setText(dateFormat.format(startDate.getTime()));
     endDateButton.setText(dateFormat.format(endDate.getTime()));
-    searchButton.setOnClickListener(this);
     startDateButton.setOnClickListener(this);
     endDateButton.setOnClickListener(this);
   }
 
+
+  private void search() {
+    if (inputMethodManager != null) {
+      inputMethodManager.hideSoftInputFromWindow(
+          searchText.getWindowToken(),
+          InputMethodManager.HIDE_IMPLICIT_ONLY);
+    }
+
+    String text = searchText.getText().toString();
+    if (text.length() > 0) {
+      String start = getDate(startDate);
+      String end = getDate(endDate);
+      Intent i = new Intent(this, SearchResultsActivity.class);
+      i.putExtra(SearchResultsActivity.EXTRA_START_DATE, start);
+      i.putExtra(SearchResultsActivity.EXTRA_END_DATE, end);
+      i.putExtra(Constants.EXTRA_QUERY_TERM, text);
+      i.putExtra(Constants.EXTRA_SIZE, 10);
+
+      startActivityWithoutAnimation(i);
+    }
+  }
+
   @Override
   public void onClick(View v) {
+    super.onClick(v);
     switch (v.getId()) {
-      case R.id.SearchButton:
-        String text = searchText.getText().toString();
-        String start = getDate(startDate);
-        String end = getDate(endDate);
-        Map<String, String> params = new HashMap<String, String>();
-        List<Story> storyList = new ArrayList<Story>();
-        params.put("searchTerm", text);
-        params.put("startDate", start);
-        params.put("endDate", end);
-
-        params.put("fields", ApiConstants.STORY_FIELDS);
-        params.put("sort", "assigned");
-        String url =
-            ApiConstants.instance().createUrl(ApiConstants.STORY_PATH, params);
-
-        String description =
-            getString(R.string.msg_search_term) + Tracker.PAGE_NAME_SEPARATOR
-                + text;
-        Intent i = new Intent(this, SearchResultsActivity.class);
-        i.putExtra(Constants.EXTRA_QUERY_URL, url);
-        i.putExtra(Constants.EXTRA_DESCRIPTION, description);
-        i.putExtra(Constants.EXTRA_QUERY_TERM, text);
-        i.putExtra(Constants.EXTRA_SIZE, 10);
-
-        startActivityWithoutAnimation(i);
-        break;
       case R.id.StartDateButton:
         OnDateSetListener callback = new OnDateSetListener() {
           @Override
           public void onDateSet(DatePicker view, int year, int monthOfYear,
-              int dayOfMonth) {
+                                int dayOfMonth) {
             startDate.set(Calendar.YEAR, year);
             startDate.set(Calendar.MONTH, monthOfYear);
             startDate.set(Calendar.DATE, dayOfMonth);
@@ -119,7 +126,7 @@ public class SearchActivity extends PlayerActivity implements
         OnDateSetListener callbackEnd = new OnDateSetListener() {
           @Override
           public void onDateSet(DatePicker view, int year, int monthOfYear,
-              int dayOfMonth) {
+                                int dayOfMonth) {
             endDate.set(Calendar.YEAR, year);
             endDate.set(Calendar.MONTH, monthOfYear);
             endDate.set(Calendar.DATE, dayOfMonth);
@@ -129,6 +136,8 @@ public class SearchActivity extends PlayerActivity implements
         new DatePickerDialog(this, callbackEnd, endDate.get(Calendar.YEAR),
             endDate.get(Calendar.MONTH), endDate.get(Calendar.DATE)).show();
         break;
+      case R.id.search_go_button:
+        search();
     }
   }
 
@@ -152,5 +161,16 @@ public class SearchActivity extends PlayerActivity implements
     pageName.append("Search Form");
     Tracker.instance(getApplication()).trackPage(
         new ActivityMeasurement(pageName.toString(), "Search"));
+  }
+
+  @Override
+  public boolean onKey(View view, int i, KeyEvent keyEvent) {
+    switch (keyEvent.getKeyCode()) {
+      case KeyEvent.KEYCODE_SEARCH:
+      case KeyEvent.KEYCODE_ENTER:
+        search();
+        return true;
+    }
+    return false;
   }
 }

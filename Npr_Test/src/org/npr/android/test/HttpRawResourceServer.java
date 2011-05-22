@@ -36,7 +36,8 @@ import java.io.InputStream;
  *     server.start();
  *     
  *     String url = "http://127.0.0.1:" + server.getPort() + "/image";
- *     // Send a request to the URL, perhaps with HttpClent or with File.open(url);
+ *     // Send a request to the URL, perhaps with HttpClient
+ *     // or with File.open(url);
  *   } finally {
  *     server.stop();
  *   }
@@ -55,7 +56,7 @@ public class HttpRawResourceServer extends HttpServer {
    * itself, so this would look in the application's res/raw/ folder.
    * 
    * To get access to the test package's res/raw/ folder files, you need to
-   * derive your test from IntrumentationTestCase and then use
+   * derive your test from InstrumentationTestCase and then use
    * getInstrumentation().getContext().
    * 
    * @param context
@@ -89,7 +90,7 @@ public class HttpRawResourceServer extends HttpServer {
   
   protected class RawResourceDataSource extends DataSource {
     private AssetFileDescriptor fd;
-    private int resourceId;
+    private final int resourceId;
     
     public RawResourceDataSource(String resourceName) {
       String resPath = String.format("%3$s:%2$s/%1$s", resourceName, "raw",

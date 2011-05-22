@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,130 +15,209 @@
 
 package org.npr.android.news;
 
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.os.Environment;
+import android.text.Html;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.OnClickListener;
 import android.webkit.WebView;
 import android.widget.Button;
-import android.widget.ImageButton;
-import android.widget.ImageView;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import org.npr.android.util.DisplayUtils;
 import org.npr.android.util.PlaylistEntry;
+import org.npr.android.util.PlaylistRepository;
 import org.npr.android.util.Tracker;
-import org.npr.android.util.TypefaceCache;
-import org.npr.android.util.Tracker.LinkEvent;
-import org.npr.android.util.Tracker.PlayLaterEvent;
-import org.npr.android.util.Tracker.PlayNowEvent;
 import org.npr.android.util.Tracker.StoryDetailsMeasurement;
+import org.npr.android.widget.WorkspaceView;
 import org.npr.api.Story;
-import org.npr.api.Story.Audio;
 import org.npr.api.Story.Byline;
-import org.npr.api.Story.Parent;
 import org.npr.api.Story.TextWithHtml;
 
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
-public class NewsStoryActivity extends PlayerActivity implements
-    OnClickListener {
-  private static String LOG_TAG = NewsStoryActivity.class.getName();
-  private String description;
-  private Story story;
-  private String storyId;
-  private String title;
-  private String topicId;
-  private String orgId;
-  private ImageView icon;
-  private Drawable iconDrawable;
-  private Handler handler = new Handler() {
-    @Override
-    public void handleMessage(Message msg) {
-      switch (msg.what) {
-        case 0:
-          icon.setImageDrawable(iconDrawable);
-          icon.setVisibility(View.VISIBLE);
-          break;
-      }
-    }
-  };
+public class NewsStoryActivity extends RootActivity implements
+    WorkspaceView.OnScreenChangeListener {
+  private static final String LOG_TAG = NewsStoryActivity.class.getName();
+
+  private WorkspaceView workspace;
+  private LayoutInflater inflater;
+  // Sample date from api: Tue, 09 Jun 2009 15:20:00 -0400
+  public static final SimpleDateFormat apiDateFormat
+      = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
+  private final DateFormat longDateFormat
+      = DateFormat.getDateInstance(DateFormat.LONG);
+
+  private static class TrackerItem {
+    String title;
+    String topicId;
+    String orgId;
+    String storyId;
+  }
+
+  private TrackerItem trackerItem = null;
+  private List<Story> stories;
+  private boolean externalStorageAvailable = false;
+
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
-    description = getIntent().getStringExtra(Constants.EXTRA_DESCRIPTION);
     super.onCreate(savedInstanceState);
-    storyId = getIntent().getStringExtra(Constants.EXTRA_STORY_ID);
-    story = NewsListActivity.getStoryFromCache(storyId);
+    stories = new ArrayList<Story>();
 
-    if (story == null) {
+    final String storyIdsString = getIntent().getStringExtra(Constants.EXTRA_STORY_ID_LIST);
+    Log.d(LOG_TAG, "Got the following id's: " + storyIdsString);
+
+    String currentStoryId = "";
+    if (getIntent().hasExtra(Constants.EXTRA_STORY_ID)) {
+      currentStoryId = getIntent().getStringExtra(Constants.EXTRA_STORY_ID);
+    } else if (getIntent().hasExtra(Constants.EXTRA_ACTIVITY_DATA)) {
+      currentStoryId = getIntent().getStringExtra(Constants.EXTRA_ACTIVITY_DATA);
+    }
+    String[] storyIds;
+    if (storyIdsString  == null) {
+      storyIds = new String[] {currentStoryId};
+    } else {
+      storyIds = storyIdsString.split(",");
+    }
+
+    if (storyIds.length == 0) {
+      finish();
+    }
+
+    String state = Environment.getExternalStorageState();
+    externalStorageAvailable = Environment.MEDIA_MOUNTED.equals(state)
+        || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state);
+
+    workspace = new WorkspaceView(this, null);
+    inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+    FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams.FILL_PARENT,
+        FrameLayout.LayoutParams.FILL_PARENT
+    );
+    layout.setMargins(0, 0, 0, DisplayUtils.convertToDIP(this, 95));
+    ((ViewGroup) findViewById(R.id.TitleContent)).addView(workspace, layout);
+
+
+    for (int i = 0; i < storyIds.length; i++) {
+      String storyId = storyIds[i];
+      Story story = NewsListActivity.getStoryFromCache(storyId);
+      stories.add(story);
+      layoutStory(story, i, storyIds.length);
+      if (storyId.equals(currentStoryId)) {
+        trackerItem = new TrackerItem();
+        workspace.setCurrentScreen(i);
+        trackerItem.orgId = story.getOrganizations().size() > 0 ?
+            story.getOrganizations().get(0).getId() : null;
+
+        for (Story.Parent p : story.getParentTopics()) {
+          if (p.isPrimary()) {
+            trackerItem.topicId = p.getId();
+            break;
+          }
+        }
+        trackerItem.title = story.getTitle();
+        trackerItem.storyId = story.getId();
+        trackNow();
+      }
+    }
+
+    workspace.setOnScreenChangeListener(this);
+  }
+
+  private void layoutStory(Story story, int position, int total) {
+    if (position >= stories.size()) {
+      Log.e(LOG_TAG, "Attempt to get story view for position " + position +
+          " beyond loaded stories");
       return;
     }
 
-    ViewGroup container = (ViewGroup) findViewById(R.id.Content);
-    ViewGroup.inflate(this, R.layout.news_story, container);
-
-    orgId =
-        story.getOrganizations().size() > 0 ? story.getOrganizations().get(0)
-            .getId() : null;
-
-    for (Parent p : story.getParentTopics()) {
-      if (p.isPrimary()) {
-        topicId = p.getId();
-        break;
-      }
+    if (story == null) {
+      Log.e(LOG_TAG, "Story at position " + position + " is null?");
+      return;
     }
-    icon = (ImageView) findViewById(R.id.NewsStoryIcon);
-    TextView title = (TextView) findViewById(R.id.NewsStoryTitleText);
-    TextView dateline = (TextView) findViewById(R.id.NewsStoryDateline);
+
+    View storyView = inflater.inflate(R.layout.news_story, null, false);
+    workspace.addView(storyView);
+
+    TextView index = (TextView) storyView.findViewById(R.id.NewsStoryIndex);
+    TextView title = (TextView) storyView.findViewById(R.id.NewsStoryTitleText);
+    TextView dateline =
+        (TextView) storyView.findViewById(R.id.NewsStoryDateline);
+    TextView byline =
+        (TextView) storyView.findViewById(R.id.NewsStoryByline);
     Button listenNow =
-        (Button) findViewById(R.id.NewsStoryListenNowButton);
+        (Button) storyView.findViewById(R.id.NewsStoryListenNowButton);
     Button enqueue =
-      (Button) findViewById(R.id.NewsStoryListenEnqueueButton);
-    ImageButton share = (ImageButton) findViewById(R.id.NewsStoryShareButton);
-    WebView textView = (WebView) findViewById(R.id.NewsStoryWebView);
+        (Button) storyView.findViewById(R.id.NewsStoryListenEnqueueButton);
+    Button share = (Button) storyView.findViewById(R.id.NewsStoryShareButton);
+    WebView textView = (WebView) storyView.findViewById(R.id.NewsStoryWebView);
     textView.setBackgroundColor(0);
 
-    title.setText(story.getTitle());
-    title.setTypeface(TypefaceCache.getTypeface("fonts/Georgia.ttf",
-        this));
-    this.title = story.getTitle();
+    index.setText(String.format(getString(R.string.msg_story_count_format),
+        position + 1, total));
+    title.setText(Html.fromHtml(story.getTitle()));
 
-    // Sample date from api: Tue, 09 Jun 2009 15:20:00 -0400
-    SimpleDateFormat longDateFormat =
-        new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss");
-    DateFormat shortDateFormat =
-        DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT);
     StringBuilder datelineText = new StringBuilder();
     try {
-      datelineText.append(shortDateFormat.format(longDateFormat.parse(story
-          .getStoryDate())));
+      datelineText.append(
+          longDateFormat.format(
+              apiDateFormat.parse(story.getStoryDate())
+          )
+      );
     } catch (ParseException e) {
       Log.e(LOG_TAG, "date format", e);
     }
 
     Iterator<Byline> bylines = story.getBylines().iterator();
     if (bylines.hasNext()) {
-      datelineText.append(" - by ");
+      StringBuilder bylineText = new StringBuilder("by ");
+      while (bylines.hasNext()) {
+        Byline b = bylines.next();
+        bylineText.append(b.getName());
+        if (bylines.hasNext()) {
+          bylineText.append(", ");
+        }
+      }
+      byline.setText(bylineText.toString()
+          .replaceFirst(", ([^,]+)$", " & $1"));
+    } else {
+      byline.setVisibility(View.GONE);
     }
-    while (bylines.hasNext()) {
-      Byline b = bylines.next();
-      datelineText.append(b.getName());
-      if (bylines.hasNext()) {
-        datelineText.append(", ");
+
+    String durationString = story.getDuration();
+    if (durationString != null) {
+      try {
+        int duration = Integer.parseInt(durationString);
+        if (duration > 0) {
+          if (datelineText.length() > 0) {
+            datelineText.append(" | ");
+          }
+          datelineText.append(
+              String.format("%d min %02d sec", duration / 60, duration % 60)
+          );
+        }
+      } catch (NumberFormatException e) {
+        Log.w(LOG_TAG, "Invalid duration: " + durationString, e);
       }
     }
+
     if (datelineText.length() == 0) {
-      dateline.setVisibility(View.GONE);      
+      dateline.setVisibility(View.GONE);
+    } else {
+      dateline.setText(datelineText.toString());
     }
-    dateline.setText(datelineText.toString());
 
     TextWithHtml text = story.getTextWithHtml();
     String textHtml;
@@ -156,114 +236,176 @@ public class NewsStoryActivity extends PlayerActivity implements
           String.format(HTML_FORMAT, "<p class='teaser'>" + story.getTeaser()
               + "</p>");
     }
-    textView.loadDataWithBaseURL(null, textHtml, "text/html", "utf-8", null);
 
-    if (story.getImages().size() > 0) {
-      final String url = story.getImages().get(0).getSrc();
-      Thread imageInitThread = new Thread(new Runnable() {
-        public void run() {
-          iconDrawable = DownloadDrawable.createFromUrl(url);
-//          if (iconDrawable.getBounds().height() > 0) {
-            handler.sendEmptyMessage(0);
-//          }
-        }
-      });
-      imageInitThread.start();
+    if (story.getImages().size() > 0 && externalStorageAvailable) {
+      String imageTag = String.format(
+          "<div id=\"story-icon\"><img src=\"file://%s/%s\" /></div>",
+          ImageThreadLoader.DiskCache.getCachePath(this),
+          ImageThreadLoader.DiskCache.makeCacheFileName(
+              story.getImages().get(0).getSrc()
+          )
+      );
+      Log.d(LOG_TAG, "Adding tag for image " + imageTag);
+      textHtml = imageTag + textHtml;
     }
 
-    listenNow.setOnClickListener(this);
-    enqueue.setOnClickListener(this);
-    share.setOnClickListener(this);
-    boolean isListenable = getPlayableUrl(getPlayable()) != null;
-    listenNow.setVisibility(isListenable ? View.VISIBLE : View.GONE);
+    textView.loadDataWithBaseURL(null, textHtml, "text/html", "utf-8", null);
+
+    StoryClickListener listener = new StoryClickListener(position);
+
+    listenNow.setOnClickListener(listener);
+    enqueue.setOnClickListener(listener);
+    share.setOnClickListener(listener);
+    boolean isListenable = story.getPlayableUrl() != null;
+    listenNow.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
     listenNow.setEnabled(isListenable);
-    enqueue.setVisibility(isListenable ? View.VISIBLE : View.GONE);
+    enqueue.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
     enqueue.setEnabled(isListenable);
   }
 
-  @Override
-  public void onClick(View v) {
-    switch (v.getId()) {
-      case R.id.NewsStoryListenNowButton:
-        playStory(true);
-        break;
-      case R.id.NewsStoryListenEnqueueButton:
-        playStory(false);
-        break;
-      case R.id.NewsStoryShareButton:
-        Intent shareIntent = new Intent(android.content.Intent.ACTION_SEND);
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, story.getTitle());
-        shareIntent.putExtra(Intent.EXTRA_TEXT, String.format(
-            "%s: http://www.npr.org/%s", story.getTitle(), story.getId()));
-        shareIntent.setType("text/plain");
-        startActivity(Intent.createChooser(shareIntent,
-            getString(R.string.msg_share_story)));
-        break;
+  private void playStory(boolean playNow, int position) {
+    if (position >= stories.size() || position == -1) {
+      Log.e(LOG_TAG, "Attempt to get story audio for position " + position +
+          " beyond loaded stories");
+      return;
     }
-  }
 
-  private void playStory(boolean playNow) {
-    Audio a = getPlayable();
-    String url = getPlayableUrl(a);
-    PlaylistEntry entry =
-        new PlaylistEntry(-1, url, story.getTitle(), false, -1, storyId);
-    LinkEvent e;
+    Story story = stories.get(position);
+    if (story == null) {
+      Log.e(LOG_TAG, "Story at position " + position + " is null?");
+      return;
+    }
+    String url = story.getPlayableUrl();
+
+
+    Tracker.LinkEvent e;
+    PlaylistRepository playlistRepository =
+        new PlaylistRepository(getApplicationContext(), getContentResolver());
     if (playNow) {
-      this.listen(entry);
-      e = new PlayNowEvent(storyId, story.getTitle(), a.getId());
+      PlaylistEntry activeEntry =
+          playlistRepository.getPlaylistItemFromId(getActiveId());
+      long playlistId;
+      if (activeEntry != null) {
+        playlistId = playlistRepository.insert(story, activeEntry.playOrder + 1);
+      } else {
+        playlistId = playlistRepository.add(story);
+      }
+      PlaylistEntry entry = playlistRepository.getPlaylistItemFromId(playlistId);
+      this.playEntryNow(entry);
+      e = new Tracker.PlayEvent(url);
     } else {
-      e = new PlayLaterEvent(storyId, story.getTitle(), a.getId());
+      playlistRepository.add(story);
+      e = new Tracker.AddToPlaylistEvent(url);
     }
-    
-    Tracker.instance(getApplication()).trackLink(e);
-  }
-  
-  private Audio getPlayable() {
-    for (Audio a : story.getAudios()) {
-      if (a.getType().equals("primary")) {
-        return a;
-      }
-    }
-    return null;
-  }
 
-  private String getPlayableUrl(Audio a) {
-    String url = null;
-    if (a != null) {
-      for (Audio.Format f : a.getFormats()) {
-        if ((url = f.getMp3()) != null) {
-          break;
-        }
-      }
-    }
-    return url;
+    Tracker.instance(getApplication()).trackLink(e);
   }
 
   // WebView is default black text.
-  public static final String HTML_FORMAT =
+  // Also add formatting for the image, if there is one.
+  private static final String HTML_FORMAT =
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\">" +
-      "<html><head><title></title>" +
-      "<style type=\"text/css\">" +
-      "body {color:#000; margin:0}" +
-      "a {color:blue}" +
-      ".teaser {font-size: 10pt}" +
-      "</style>" +
-      "</head>" +
-      "<body>" +
-      "%s" +
-      "</body></html>";
+          "<html><head><title></title>" +
+          "<style type=\"text/css\">" +
+          "body {color:#000; margin:0; font-size:10pt;}" +
+          "a {color:blue}" +
+          ".teaser {font-size: 10pt}" +
+          "#story-icon {width: 100px; float:left; " +
+          "margin-right: 6pt; margin-bottom: 3pt;}" +
+          "#story-icon img {vertical-align: middle; width: 100%%;}" +
+          "</style>" +
+          "</head>" +
+          "<body>" +
+          "%s" +
+          "</body></html>";
 
-  @Override
-  public CharSequence getMainTitle() {
-    return description;
-  }
 
   @Override
   public void trackNow() {
-    StringBuilder pageName = new StringBuilder(storyId).append("-");
-    pageName.append(title);
-    Tracker.instance(getApplication()).trackPage(
-        new StoryDetailsMeasurement(pageName.toString(), "News", orgId, topicId,
-            storyId));
+    if (trackerItem != null) {
+      StringBuilder pageName = new StringBuilder(trackerItem.storyId).append("-");
+      pageName.append(trackerItem.title);
+      Tracker.instance(getApplication()).trackPage(
+          new StoryDetailsMeasurement(
+              pageName.toString(),
+              "News",
+              trackerItem.orgId,
+              trackerItem.topicId,
+              trackerItem.storyId
+          )
+      );
+      trackerItem = null;
+    }
+  }
+
+
+  @Override
+  public void onScreenChanged(int newPosition) {
+    Story story = stories.get(newPosition);
+    if (story != null) {
+      trackerItem = new TrackerItem();
+
+      trackerItem.orgId = story.getOrganizations().size() > 0 ?
+          story.getOrganizations().get(0).getId() : null;
+
+      for (Story.Parent p : story.getParentTopics()) {
+        if (p.isPrimary()) {
+          trackerItem.topicId = p.getId();
+          break;
+        }
+      }
+      trackerItem.title = story.getTitle();
+      trackerItem.storyId = story.getId();
+      trackNow();
+    }
+  }
+
+
+  /**
+   * Position-aware click listener for each story view so that when the play
+   * buttons are clicked we know which story's button got clicked.
+   */
+  private class StoryClickListener implements View.OnClickListener {
+    private final int position;
+
+    public StoryClickListener(int position) {
+      this.position = position;
+    }
+
+
+    @Override
+    public void onClick(View v) {
+      Log.d(LOG_TAG, "Click registered for view " + position);
+      switch (v.getId()) {
+        case R.id.NewsStoryListenNowButton:
+          playStory(true, position);
+          break;
+        case R.id.NewsStoryListenEnqueueButton:
+          playStory(false, position);
+          break;
+        case R.id.NewsStoryShareButton:
+          if (position >= stories.size()) {
+            Log.e(LOG_TAG, "Attempt to get story audio for position " + position +
+                " beyond loaded stories");
+          } else {
+            Story story = stories.get(position);
+            if (story == null) {
+              Log.e(LOG_TAG, "Story at position " + position + " is null?");
+            } else {
+              String shortlink = story.getShortLink();
+              if (shortlink == null) {
+                shortlink = "http://npr.org/" + story.getId();
+              }
+              Intent shareIntent = new Intent(android.content.Intent.ACTION_SEND);
+              shareIntent.putExtra(Intent.EXTRA_SUBJECT, story.getTitle());
+              shareIntent.putExtra(Intent.EXTRA_TEXT, shortlink);
+              shareIntent.setType("text/plain");
+              startActivity(Intent.createChooser(shareIntent,
+                  getString(R.string.msg_share_story)));
+            }
+          }
+          break;
+      }
+    }
   }
 }

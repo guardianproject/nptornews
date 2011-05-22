@@ -1,83 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<LinearLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:id="@+id/ScrollView01"
-  android:layout_width="fill_parent"
-  android:layout_height="fill_parent" android:paddingTop="5dip">
+  android:orientation="vertical"
+  android:layout_height="fill_parent"
+  android:layout_width="fill_parent">
+
   <LinearLayout
     android:orientation="vertical"
-    android:layout_height="fill_parent"
+    android:padding="10dip"
+    android:layout_height="wrap_content"
     android:layout_width="fill_parent">
-    <TextView
-      android:id="@+id/TextView02"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:textAppearance="?android:attr/textAppearanceMedium"
-      android:text="@string/msg_search_description"
-      android:layout_marginLeft="10dip"></TextView>
+      <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/msg_search_term"
+        android:textAppearance="?android:attr/textAppearanceMedium"/>
+      <LinearLayout
+        android:layout_height="wrap_content"
+        android:layout_width="fill_parent"
+        android:orientation="horizontal">
+        <EditText
+          android:id="@+id/SearchText"
+          android:background="@drawable/textfield_search"
+          android:layout_width="fill_parent"
+          android:layout_height="wrap_content"
+          android:paddingTop="10dip"
+          android:layout_weight="1"
+          android:hint="@string/msg_search_hint"
+          android:imeOptions="actionSearch"
+          android:inputType="text"/>
+        <ImageButton
+          android:id="@+id/search_go_button"
+          android:background="@drawable/btn_search_dialog"
+          android:src="@drawable/ic_btn_search"
+          android:layout_width="wrap_content"
+          android:layout_height="fill_parent"
+          />
+      </LinearLayout>
+    </LinearLayout>
+
+    <include layout="@layout/divider" />
+
     <TableLayout
-      android:id="@+id/TableLayout01"
       android:layout_height="wrap_content"
       android:layout_width="fill_parent"
       android:stretchColumns="1"
-      android:layout_margin="5dip">
+      android:padding="10dip">
+
       <TableRow
-        android:id="@+id/TableRow02"
         android:layout_height="wrap_content"
         android:layout_width="fill_parent">
         <TextView
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
+          android:gravity="right"
           android:text="@string/msg_search_start_date"
-          android:id="@+id/StartDateText"
-          android:textAppearance="?android:attr/textAppearanceMedium"></TextView>
+          android:textAppearance="?android:attr/textAppearanceMedium"/>
         <Button
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:layout_marginLeft="10dip"
-          android:id="@+id/StartDateButton"></Button>
+          android:id="@+id/StartDateButton"/>
       </TableRow>
       <TableRow
-        android:id="@+id/TableRow03"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:paddingTop="12dip">
         <TextView
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
+          android:gravity="right"
           android:text="@string/msg_search_end_date"
-          android:id="@+id/EndDateText"
-          android:textAppearance="?android:attr/textAppearanceMedium"></TextView>
+          android:textAppearance="?android:attr/textAppearanceMedium"/>
         <Button
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:layout_marginLeft="10dip"
-          android:id="@+id/EndDateButton"></Button>
-      </TableRow>
-      <TableRow
-        android:id="@+id/TableRow01"
-        android:layout_height="wrap_content"
-        android:layout_width="fill_parent">
-        <TextView
-          android:id="@+id/TextView01"
-          android:layout_width="wrap_content"
-          android:layout_height="wrap_content"
-          android:text="@string/msg_search_term"
-          android:textAppearance="?android:attr/textAppearanceMedium"></TextView>
-        <EditText
-          android:id="@+id/EditText01"
-          android:layout_height="wrap_content"
-          android:layout_width="fill_parent"
-          android:layout_marginLeft="10dip"
-          android:hint="@string/msg_search_hint"
-          android:imeOptions="actionDone"
-          android:inputType="text"></EditText>
+          android:id="@+id/EndDateButton"/>
       </TableRow>
     </TableLayout>
-    <Button
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="@string/msg_search_button"
-      android:id="@+id/SearchButton">
-    </Button>
   </LinearLayout>
-</ScrollView>

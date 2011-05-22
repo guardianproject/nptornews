@@ -1,75 +1,89 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
   xmlns:android="http://schemas.android.com/apk/res/android"
-  package="org.npr.android.news" android:versionName="1.2.113" android:versionCode="3">
+  package="org.npr.android.news" android:versionName="1.9.1"
+  android:versionCode="3">
   <application
+    android:label="@string/app_name"
     android:theme="@style/MyTheme"
-    android:icon="@drawable/icon">
+    android:icon="@drawable/icon"
+    android:name="NewsApplication">
     <activity
-      android:label="@string/app_name"
-      android:configChanges="keyboardHidden|orientation"
-      android:name="Main" android:launchMode="singleTask">
+      android:name="StationListActivity"
+      android:windowSoftInputMode="adjustPan"/>
+    <activity
+      android:name="StationDetailsActivity"/>
+    <activity
+      android:name="NewsStoryActivity"/>
+    <activity
+      android:name="NewsListActivity">
       <intent-filter>
-        <action
-          android:name="android.intent.action.MAIN" />
-        <category
-          android:name="android.intent.category.LAUNCHER" />
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
       <intent-filter>
-        <action android:name="android.intent.action.VIEW"></action>
-        <category android:name="android.intent.category.DEFAULT"></category>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
     </activity>
     <activity
-      android:name="EditPreferences"
-      android:label="@string/app_name"></activity>
+      android:name="NewsTopicActivity"/>
     <activity
-      android:name="StationListActivity"></activity>
+      android:name="AllProgramsActivity"/>
     <activity
-      android:name="StationDetailsActivity"></activity>
+      android:name="AboutActivity"/>
     <activity
-      android:name="NewsStoryActivity"></activity>
+      android:name="SearchActivity"
+      android:windowSoftInputMode="adjustPan|stateVisible"/>
     <activity
-      android:name="NewsListActivity"></activity>
+      android:name="PodcastActivity"/>
     <activity
-      android:name="StationSearchActivity"
-      android:theme="@android:style/Theme.Dialog"></activity>
-    <activity
-      android:name="NewsTopicActivity"></activity>
-    <activity
-      android:name="AboutActivity"></activity>
+      android:name="SearchResultsActivity"
+      android:windowSoftInputMode="adjustPan|stateHidden">
+      <intent-filter>
+        <action android:name="android.intent.action.SEARCH"/>
+      </intent-filter>
+      <meta-data android:name="android.app.searchable"
+                 android:resource="@xml/searchable"/>
+    </activity>
+    <activity android:name="ProgramStoryListActivity"/>
+    <activity android:name="HourlyNewsActivity"/>
     <provider
       android:name="org.npr.android.util.PlaylistProvider"
-      android:authorities="org.npr.android.util.Playlist"></provider>
+      android:authorities="org.npr.android.util.Playlist"/>
+    <provider
+      android:name="org.npr.api.IPhoneNewsAppProgramsConfProvider"
+      android:authorities="org.npr.apr.IPhoneNewsAppProgramsConf"/>
+    <provider
+      android:name="org.npr.android.util.FavoriteStationsProvider"
+      android:authorities="org.npr.android.util.FavoriteStations"/>
+
+    <service android:name="PlaybackService"/>
+
     <uses-library
-      android:name="android.test.runner"></uses-library>
-    <activity
-      android:name="SearchActivity"></activity>
-    <activity
-      android:name="PlaylistActivity"></activity>
-    <activity
-      android:name="PodcastActivity"></activity>
-    <activity
-      android:name="SearchResultsActivity"></activity>
-  <service android:name="PlaybackService"></service>
-</application>
+      android:name="android.test.runner"/>
+
+    <!-- declare the default searchable Activity for the whole app -->
+    <meta-data android:name="android.app.default_searchable"
+               android:value=".SearchResultsActivity"/>
+  </application>
   <uses-permission
-    android:name="android.permission.INTERNET"></uses-permission>
+    android:name="android.permission.INTERNET"/>
   <uses-permission
-    android:name="android.permission.ACCESS_FINE_LOCATION"></uses-permission>
+    android:name="android.permission.ACCESS_FINE_LOCATION"/>
   <uses-permission
-    android:name="android.permission.ACCESS_MOCK_LOCATION"></uses-permission>
+    android:name="android.permission.ACCESS_MOCK_LOCATION"/>
   <uses-permission
-    android:name="android.permission.READ_PHONE_STATE" />
-  <uses-permission 
-    android:name="android.permission.ACCESS_NETWORK_STATE" />
+    android:name="android.permission.READ_PHONE_STATE"/>
   <uses-permission
-    android:name="android.permission.BROADCAST_STICKY"></uses-permission>
+    android:name="android.permission.ACCESS_NETWORK_STATE"/>
+  <uses-permission
+    android:name="android.permission.BROADCAST_STICKY"/>
   <uses-sdk
-    android:targetSdkVersion="3"
-    android:minSdkVersion="3"></uses-sdk>
+    android:targetSdkVersion="4"
+    android:minSdkVersion="4"/>
   <supports-screens
     android:normalScreens="true"
     android:anyDensity="true"
-    android:largeScreens="true"></supports-screens>
+    android:largeScreens="true"/>
 </manifest>

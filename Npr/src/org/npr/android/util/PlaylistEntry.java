@@ -15,26 +15,25 @@
 package org.npr.android.util;
 
 public class PlaylistEntry {
-  public long id;
+  public final long id;
   public final String url;
   public final String title;
   public final boolean isStream;
-  public int order;
+  public final int playOrder;
   public final String storyID;
 
   public PlaylistEntry(long id, String url, String title, boolean isStream,
-      int order) {
-    this(id, url, title, isStream, order, null);
+      int playOrder) {
+    this(id, url, title, isStream, playOrder, null);
   }
 
   public PlaylistEntry(long id, String url, String title, boolean isStream,
-      int order, String storyID) {
+      int playOrder, String storyID) {
     this.id = id;
     this.url = url;
     this.title = title;
     this.isStream = isStream;
-    this.order = order;
+    this.playOrder = playOrder;
     this.storyID = storyID;
   }
 }
-

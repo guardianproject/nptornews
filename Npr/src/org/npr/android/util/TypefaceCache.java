@@ -6,7 +6,7 @@ import android.graphics.Typeface;
 import java.util.HashMap;
 
 public class TypefaceCache {
-  private static HashMap<String, Typeface> map =
+  private static final HashMap<String, Typeface> map =
       new HashMap<String, Typeface>();
 
   public static Typeface getTypeface(String file, Context context) {

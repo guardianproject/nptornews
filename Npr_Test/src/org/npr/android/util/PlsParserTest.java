@@ -50,7 +50,7 @@ public class PlsParserTest extends AndroidTestCase {
     }
   }
   
-  public void teadDown() {
+  public void tearDown() {
     testPlsFile.delete();
   }
   

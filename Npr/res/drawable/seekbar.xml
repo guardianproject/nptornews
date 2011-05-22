@@ -1,0 +1,17 @@
+<layer-list
+  xmlns:android="http://schemas.android.com/apk/res/android">
+  <item
+    android:id="@android:id/background"
+    android:drawable="@drawable/seek_back">
+  </item>
+  <item
+    android:id="@android:id/secondaryProgress">
+    <clip
+      android:drawable="@drawable/seek_progress"/>
+  </item>
+  <item
+    android:id="@android:id/progress">
+    <clip
+      android:drawable="@drawable/seek_active"/>
+  </item>
+</layer-list>

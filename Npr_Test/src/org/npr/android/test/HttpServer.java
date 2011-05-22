@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -198,9 +199,13 @@ public abstract class HttpServer implements Runnable {
       return null;
     }
 
-    StringTokenizer st = new StringTokenizer(firstLine);
-    st.nextToken(); // Skip method
-    return URLDecoder.decode(st.nextToken());
+    try {
+      StringTokenizer st = new StringTokenizer(firstLine);
+      st.nextToken(); // Skip method
+      return URLDecoder.decode(st.nextToken(), "x-www-form-urlencoded");
+    } catch (UnsupportedEncodingException e) {
+      return null;
+    }
   }
 
   /*
@@ -210,7 +215,7 @@ public abstract class HttpServer implements Runnable {
   private void processRequest(DataSource dataSource, Socket client)
       throws IllegalStateException, IOException {
     if (dataSource == null) {
-      Log.e(TAG, "Inavlid (null) resource.");
+      Log.e(TAG, "Invalid (null) resource.");
       client.close();
       return;
     }
@@ -221,13 +226,13 @@ public abstract class HttpServer implements Runnable {
         HttpStatus.SC_OK, "OK"));
     httpString.append("\n");
 
-    httpString.append("Content-Type: " + dataSource.getContentType());
+    httpString.append("Content-Type: ").append(dataSource.getContentType());
     httpString.append("\n");
     
     // Some content (e.g. streams) does not define a length
     long length = dataSource.getContentLength();
     if( length >= 0 ) {
-      httpString.append("Content-Length: " + length);
+      httpString.append("Content-Length: ").append(length);
       httpString.append("\n");
     }
 
@@ -238,7 +243,7 @@ public abstract class HttpServer implements Runnable {
     try {
       data = dataSource.createInputStream();
       byte[] buffer = httpString.toString().getBytes();
-      int readBytes = -1;
+      int readBytes;
       Log.d(TAG, "writing to client");
       client.getOutputStream().write(buffer, 0, buffer.length);
 

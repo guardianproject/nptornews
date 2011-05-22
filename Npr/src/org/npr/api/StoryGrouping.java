@@ -10,6 +10,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
@@ -18,11 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import javax.xml.parsers.ParserConfigurationException;
-
 public abstract class StoryGrouping extends ApiElement implements
     Comparable<StoryGrouping> {
-  public static final String LOG_TAG = StoryGrouping.class.getName();
+  private static final String LOG_TAG = StoryGrouping.class.getName();
   
   private final String title;
   private final int storycounttoday;
@@ -116,10 +115,6 @@ public abstract class StoryGrouping extends ApiElement implements
     }
   }
 
-  public static abstract class StoryGroupingBuilderFactory {
-    public abstract StoryGroupingBuilder<? extends StoryGrouping> newInstance(
-        String id, int storycounttoday, int storycountmonth, int storycountall);
-  }
 
   public static class StoryGroupingFactory<T extends StoryGrouping> {
     public StoryGroupingFactory(Class<T> klass, String groupingType) {
@@ -130,12 +125,7 @@ public abstract class StoryGrouping extends ApiElement implements
     private final Class<T> klass;
     private final String groupingType;
 
-    public static <E extends StoryGrouping> StoryGroupingFactory<E> getFactory(
-        Class<E> c, String topic) {
-      return new StoryGroupingFactory<E>(c, topic);
-    }
-
-    public List<T> parseStoryGroupings(Class<T> c, Node rootNode) {
+    protected List<T> parseStoryGroupings(Class<T> c, Node rootNode) {
       LinkedList<T> result = new LinkedList<T>();
       TreeSet<T> resultSet = new TreeSet<T>();
       NodeList childNodes = rootNode.getChildNodes();
@@ -152,7 +142,7 @@ public abstract class StoryGrouping extends ApiElement implements
     }
 
     @SuppressWarnings("unchecked")
-    private T createStoryGrouping(Class<T> c, Node node) {
+    protected T createStoryGrouping(Class<T> c, Node node) {
       if (!node.getNodeName().equals("item") ||
           !node.hasChildNodes()) {
         return null;
@@ -184,8 +174,8 @@ public abstract class StoryGrouping extends ApiElement implements
       Log.d(LOG_TAG, "downloading StoryGroupings");
       Map<String, String> params = new HashMap<String, String>();
       params.put(ApiConstants.PARAM_ID, groupingType);
-      String url =
-          ApiConstants.instance().createUrl(ApiConstants.LIST_PATH, params);
+      String url = ApiConstants.instance()
+          .createUrl(ApiConstants.LIST_PATH, params);
 
       Node storyGroupings = null;
       try {
@@ -207,8 +197,9 @@ public abstract class StoryGrouping extends ApiElement implements
           + storyGroupings.getChildNodes().getLength());
       List<T> result = parseStoryGroupings(klass, storyGroupings);
       Log.d(LOG_TAG, "found StoryGroupings: " + result.size());
-      int end = count >= result.size() ? result.size() : count;
-      return result.subList(0, end);
+      return (count >= 0 && count < result.size()) ?
+          result.subList(0, count) :
+          result;
     }
   }
 }

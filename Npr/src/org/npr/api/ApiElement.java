@@ -15,7 +15,7 @@
 package org.npr.api;
 
 public abstract class ApiElement {
-  protected final String id;
+  private final String id;
 
   public ApiElement(String id) {
     this.id = id;

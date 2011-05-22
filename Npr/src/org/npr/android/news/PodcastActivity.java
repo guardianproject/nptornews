@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,68 +15,159 @@
 
 package org.npr.android.news;
 
-import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.DialogInterface.OnClickListener;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Html;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.AdapterView.OnItemClickListener;
 
-import org.npr.android.util.Tracker;
-import org.npr.android.util.Tracker.LinkEvent;
-import org.npr.android.util.Tracker.PodcastLaterEvent;
-import org.npr.android.util.Tracker.PodcastNowEvent;
+import org.npr.android.util.DisplayUtils;
 import org.npr.api.Podcast;
 import org.npr.api.Podcast.Item;
 import org.npr.api.Podcast.PodcastFactory;
 
-public class PodcastActivity extends Activity implements OnItemClickListener,
-    OnClickListener {
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+
+public class PodcastActivity extends RootActivity implements
+    OnItemClickListener {
+
+  private static final String LOG_TAG = PodcastActivity.class.getName();
   public static final String EXTRA_PODCAST_URL = "extra_podcast_url";
   public static final String EXTRA_PODCAST_TITLE = "extra_podcast_title";
+
+  private String url;
+  private String title;
+
+  private ArrayList<ListItem> listItems;
+  private ArrayAdapter<ListItem> listAdapter;
   private Podcast podcast;
-  private ProgressBar progressBar;
-  private ListView listView;
-  private TextView miscText;
-  private Item lastItem;
+  private boolean podcastLoaded = false;
+
+  private class ListItem {
+    private final Item item;
+    private final String header;
+
+    private ListItem(Item item) {
+      this.item = item;
+      this.header = null;
+    }
+
+    private ListItem(String header) {
+      this.item = null;
+      this.header = header;
+    }
+
+    public boolean isHeader() {
+      return header != null;
+    }
+  }
+
+  private class ListItemAdapter extends ArrayAdapter<ListItem> {
+    private final SimpleDateFormat hourlyFormat;
+
+    public ListItemAdapter(Context context, ArrayList<ListItem> listItems) {
+      super(context, R.layout.podcast_item, R.id.podcast_title, listItems);
+      hourlyFormat = new SimpleDateFormat("MMM d, yyyy, h:mm a z");
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+      convertView = super.getView(position, convertView, parent);
+      ListItem listItem = this.getItem(position);
+      if (listItem == null) {
+        return convertView;
+      }
+
+      TextView titleText = (TextView) convertView.findViewById(R.id.podcast_title);
+      TextView summary = (TextView) convertView.findViewById(R.id
+          .podcast_summary);
+
+      if (position == 0) {
+        convertView.setEnabled(false);
+        convertView.setBackgroundDrawable(getResources().getDrawable(
+            R.drawable.station_name_background));
+        convertView.getLayoutParams().height = AbsListView.LayoutParams
+            .WRAP_CONTENT;
+        convertView.setPadding(10, 8, 10, 8);
+        titleText.setText(Html.fromHtml(title));
+        titleText.setTextColor(getResources().getColor(R.color.black));
+        titleText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+        if (podcastLoaded) {
+          summary.setVisibility(View.VISIBLE);
+          summary.setText(Html.fromHtml(podcast.getSummary()));
+          summary.setTextColor(getResources().getColor(R.color.black));
+          summary.setTextAppearance(getContext(),
+              android.R.attr.textAppearanceSmall);
+        } else {
+          summary.setVisibility(View.GONE);
+        }
+      } else if (listItem.isHeader()) {
+        convertView.setEnabled(false);
+        convertView.setBackgroundDrawable(getResources().getDrawable(
+            R.drawable.news_list_title_background));
+        convertView.getLayoutParams().height =
+            DisplayUtils.convertToDIP(getContext(), 20);
+        convertView.setPadding(10, 0, 10, 0);
+        titleText.setText(listItem.header);
+        titleText.setTextColor(getResources().getColor(R.color.news_title_text));
+        titleText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        summary.setVisibility(View.GONE);
+      } else {
+        convertView.setEnabled(true);
+        convertView.setBackgroundDrawable(null);
+        convertView.getLayoutParams().height = AbsListView.LayoutParams
+            .WRAP_CONTENT;
+        convertView.setPadding(10, 18, 10, 18);
+        titleText.setText(Html.fromHtml(listItem.item.getTitle()));
+        titleText.setTextColor(getResources().getColor(R.color.black));
+        titleText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        try {
+          Date parsed = NewsStoryActivity.apiDateFormat.parse(listItem.item
+              .getPubDate());
+          summary.setText(hourlyFormat.format(parsed));
+        } catch (ParseException e) {
+          Log.e(LOG_TAG, "date format", e);
+          summary.setText("");
+        }
+        summary.setTextColor(Color.rgb(0x73, 0x73, 0x73));
+        summary.setTextAppearance(getContext(),
+            android.R.attr.textAppearanceSmall);
+      }
+      return convertView;
+    }
+  }
 
   private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
       if (podcast != null) {
-        ArrayAdapter<Item> adapter =
-            new ArrayAdapter<Item>(PodcastActivity.this,
-                android.R.layout.simple_list_item_2, android.R.id.text1,
-                podcast.getItems()) {
-
-              @Override
-              public View getView(int position, View convertView,
-                  ViewGroup parent) {
-                View v = super.getView(position, convertView, parent);
-                Item i = getItem(position);
-                TextView tv = (TextView) v.findViewById(android.R.id.text2);
-                tv.setText(i.getPubDate());
-                return v;
-              }
-        };
-        
-        progressBar.setVisibility(View.GONE);
-        listView.setAdapter(adapter);
-        if (podcast.getSummary() != null) {
-          miscText.setText(podcast.getSummary());
-          miscText.setVisibility(View.VISIBLE);
+        podcastLoaded = true;
+        stopIndeterminateProgressIndicator();
+        if (podcast.getItems().size() > 0) {
+          listItems.add(new ListItem(getString(
+              R.string.msg_podcast_stream_header) +
+              " (" + podcast.getItems().size() + ")"));
+          for (Item item : podcast.getItems()) {
+            listItems.add(new ListItem(item));
+          }
+          listAdapter.notifyDataSetChanged();
         }
       } else {
         final AlertDialog.Builder builder = new AlertDialog.Builder(PodcastActivity.this);
@@ -84,31 +176,42 @@ public class PodcastActivity extends Activity implements OnItemClickListener,
         builder.setNeutralButton(R.string.msg_ok, new OnClickListener() {
           @Override
           public void onClick(DialogInterface dialog, int which) {
-            PodcastActivity.this.finish();            
+            PodcastActivity.this.finish();
           }
         });
         builder.create().show();
       }
     }
   };
-  
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.podcast);
-    
-    final String url = getIntent().getStringExtra(EXTRA_PODCAST_URL);
-    String title = getIntent().getStringExtra(EXTRA_PODCAST_TITLE);
-    TextView titleText = (TextView) findViewById(R.id.PodcastTitle);
-    titleText.setText(title);
-    progressBar = (ProgressBar) findViewById(R.id.ProgressBar01);
-    progressBar.setVisibility(View.VISIBLE);
-    miscText = (TextView) findViewById(R.id.PodcastSummary);
-    miscText.setVisibility(View.GONE);
-    listView = (ListView) findViewById(R.id.ListView01);
-    listView.setOnItemClickListener(this);
-    
-    new Thread(new Runnable(){
+
+    ViewGroup container = (ViewGroup) findViewById(R.id.TitleContent);
+    ViewGroup.inflate(this, R.layout.podcast, container);
+
+    listItems = new ArrayList<ListItem>();
+    if (getIntent().hasExtra(EXTRA_PODCAST_URL)) {
+      url = getIntent().getStringExtra(EXTRA_PODCAST_URL);
+      title = getIntent().getStringExtra(EXTRA_PODCAST_TITLE);
+    } else if (getIntent().hasExtra(Constants.EXTRA_ACTIVITY_DATA)) {
+      String activityInfo = getIntent().getStringExtra(Constants
+          .EXTRA_ACTIVITY_DATA);
+      url = activityInfo.substring(0, activityInfo.indexOf(' '));
+      title = activityInfo.substring(activityInfo.indexOf(' ') + 1,
+          activityInfo.length());
+      listItems.add(new ListItem(title));
+    }
+
+    ListView streamList = (ListView) findViewById(R.id.podcast_stream_list);
+    streamList.setOnItemClickListener(this);
+
+    listAdapter = new ListItemAdapter(this, listItems);
+    streamList.setAdapter(listAdapter);
+
+    startIndeterminateProgressIndicator();
+    new Thread(new Runnable() {
       @Override
       public void run() {
         podcast = PodcastFactory.downloadPodcast(url);
@@ -119,39 +222,11 @@ public class PodcastActivity extends Activity implements OnItemClickListener,
 
   @Override
   public void onItemClick(AdapterView<?> parent, View view, int position,
-      long id) {
-    Item i = (Item) parent.getAdapter().getItem(position);
-    showDialog(i);
-  }
-  
-  private void showDialog(Item i) {
-    lastItem = i;
-    AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    builder.setTitle(R.string.msg_podcast_dialog_title);
-    builder.setMessage(i.toString());
-    builder.setNegativeButton(R.string.msg_podcast_cancel, this);
-    builder.setNeutralButton(R.string.msg_podcast_enqueue, this);
-    builder.setPositiveButton(R.string.msg_podcast_listen_now, this);
-    Dialog d = builder.create();
-    d.show();
-  }
-
-  @Override
-  public void onClick(DialogInterface dialog, int which) {
-    Log.w("Podcast", "got Click");
-    boolean play = !(which == Dialog.BUTTON_NEGATIVE);
-    boolean playNow = play && (which == Dialog.BUTTON_POSITIVE);
-    if (play) {
-      LinkEvent e;
-      if (playNow) {
-        e = new PodcastNowEvent(lastItem.getTitle(), lastItem.getTitle(),
-                lastItem.getUrl());
-      } else {
-        e = new PodcastLaterEvent(podcast.getTitle(), lastItem.getTitle(),
-                lastItem.getUrl());
-      }
-      // TODO: play or queue audio
-      Tracker.instance(getApplication()).trackLink(e);    
+                          long id) {
+    ListItem li = (ListItem) parent.getItemAtPosition(position);
+    if (!li.isHeader()) {
+      playSingleNow(Playable.PlayableFactory.fromPodcastItem(li.item, url,
+          title));
     }
   }
 }

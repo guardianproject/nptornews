@@ -53,7 +53,7 @@ public class BlockedHttpServer extends HttpServer {
         try {
           wait(BLOCK_TIME_MS);
           // write next byte from source stream
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ignored) {
         }
       }
       return 0;

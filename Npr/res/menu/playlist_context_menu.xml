@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:id="@+id/PlaylistReadEntry"
+        android:title="@string/menu_read_story"/>
+  <item android:id="@+id/PlaylistRemoveEntry"
+        android:title="@string/menu_remove_entry"/>
+</menu>

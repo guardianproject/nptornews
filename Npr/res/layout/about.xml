@@ -1,42 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<ScrollView
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:layout_height="fill_parent"
-  android:layout_width="fill_parent"
-  android:orientation="vertical">
-  <ScrollView
+  android:layout_height="wrap_content"
+  android:layout_width="fill_parent">
+  <LinearLayout
     android:layout_height="wrap_content"
-    android:layout_width="fill_parent">
+    android:layout_width="fill_parent"
+    android:orientation="vertical"
+    android:padding="10dip"
+    android:paddingRight="20dip">
+    <ImageView
+      android:layout_height="wrap_content"
+      android:scaleType="fitCenter"
+      android:layout_width="wrap_content"
+      android:src="@drawable/about"
+      android:layout_marginTop="10dip"/>
+    <TextView
+      android:id="@+id/AboutText"
+      android:autoLink="email"
+      android:layout_height="wrap_content"
+      android:layout_width="wrap_content"
+      android:textAppearance="?android:attr/textAppearanceSmall"
+      android:layout_marginTop="16dip">
+    </TextView>
     <LinearLayout
-      android:id="@+id/LinearLayout01"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:orientation="horizontal">
+      <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/FeedbackButton"
+        android:text="@string/msg_about_feedback"
+        android:background="@drawable/story_button_background"/>
+      <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dip"
+        android:id="@+id/ShareButton"
+        android:text="@string/msg_about_share"
+        android:drawableLeft="@drawable/share"
+        android:background="@drawable/story_button_background"/>
+      <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="5dip"
+        android:id="@+id/LearnMoreButton"
+        android:text="@string/msg_about_learn_more"
+        android:background="@drawable/story_button_background"/>
+    </LinearLayout>
+    <TextView
+      android:layout_height="wrap_content"
+      android:text="@string/msg_about_description"
+      android:layout_width="fill_parent"
+      android:textAppearance="?android:attr/textAppearanceSmall"
+      android:layout_marginTop="10dip"/>
+    <LinearLayout
+      android:orientation="horizontal"
       android:layout_height="wrap_content"
       android:layout_width="fill_parent"
-      android:orientation="vertical"
-      android:padding="10dip" android:paddingRight="20dip">
-      <ImageView
-        android:id="@+id/ImageView01"
-        android:layout_height="wrap_content"
-        android:scaleType="fitCenter"
+      android:layout_marginTop="10dip">
+      <Button
         android:layout_width="wrap_content"
-        android:src="@drawable/about"
-        android:layout_marginLeft="-10dip"></ImageView>
-      <include layout="@layout/divider" />
-      <TextView
-        android:id="@+id/AboutText"
         android:layout_height="wrap_content"
-        android:layout_width="fill_parent"
-        android:textAppearance="?android:attr/textAppearanceSmall" android:layout_marginTop="10dip">
-      </TextView>
-      <Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/FeedbackButton" android:text="@string/msg_about_feedback"></Button><include layout="@layout/divider" />
-      <TextView
-        android:id="@+id/TextView01"
+        android:id="@+id/PrivacyButton"
+        android:text="@string/msg_about_privacy"
+        android:background="@drawable/story_button_background"/>
+      <Button
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/msg_about_description"
-        android:layout_width="fill_parent"
-        android:textAppearance="?android:attr/textAppearanceSmall" android:layout_marginTop="10dip"></TextView>
-    <Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/PrivacyButton" android:text="@string/msg_about_privacy"></Button>
-<Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/TermsButton" android:text="@string/msg_about_terms"></Button>
-
-</LinearLayout>
-  </ScrollView>
-</LinearLayout>
+        android:layout_marginLeft="10dip"
+        android:id="@+id/TermsButton"
+        android:text="@string/msg_about_terms"
+        android:background="@drawable/story_button_background"/>
+    </LinearLayout>
+  </LinearLayout>
+</ScrollView>

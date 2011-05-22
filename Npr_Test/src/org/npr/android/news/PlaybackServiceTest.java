@@ -13,14 +13,8 @@
 // limitations under the License.
 package org.npr.android.news;
 
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.media.MediaPlayer;
-import android.media.MediaPlayer.OnCompletionListener;
-import android.media.MediaPlayer.OnPreparedListener;
-import android.os.IBinder;
 import android.test.InstrumentationTestCase;
 import android.util.Log;
 
@@ -29,16 +23,15 @@ import org.npr.android.test.HttpRawResourceServer;
 import org.npr.android.test.NullStreamServer;
 import org.npr.android.util.PlaylistEntry;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 /**
  * Sets up a series of tests for the PlaybackService class.
- * 
+ *
  * @author jeremywadsack
  */
 public class PlaybackServiceTest extends InstrumentationTestCase {
-  public static final String TAG = PlaybackServiceTest.class.getName();
+  private static final String TAG = PlaybackServiceTest.class.getName();
 
   /*
    * Verifies basic functionality - that the player will play an MP3 file
@@ -47,20 +40,17 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
   public void testShouldPlayRemoteMP3File() {
     // create a local server that can post a file out of the res/raw folder
     HttpRawResourceServer server = new HttpRawResourceServer(
-        getInstrumentation().getContext(), false);
+      getInstrumentation().getContext(), false);
     PlaybackServiceHelper tester = new PlaybackServiceHelper(
-        getInstrumentation().getTargetContext());
+      getInstrumentation().getTargetContext());
     try {
       server.init();
       server.start();
 
-      // bind a testing activity to the service that logs callbacks
-      tester.bind();
-
       // listen to our file
       PlaylistEntry entry = new PlaylistEntry(-1L, "http://127.0.0.1:"
-          + server.getPort() + "/one_second_silence_mp3", "Silence", false, -1);
-      PlaybackService.setCurrent(entry);
+        + server.getPort() + "/one_second_silence_mp3", "Silence", false, -1);
+
       tester.listen(entry);
 
       final int maxWait = 30 * 1000; // Wait 30 seconds to finish playing
@@ -79,9 +69,6 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
 
     } finally {
       // Cleanup
-      if (tester != null) {
-        tester.destroy();
-      }
       server.stop();
     }
 
@@ -90,7 +77,7 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
     assertTrue("Never completed playing song", tester.isComplete());
     ArrayList<String> log = tester.getLog();
     assertNotNull("File never started playing.", findStringStartsWith(log,
-        "Prepared"));
+      "Prepared"));
 
     // and that the duration and final position are all correct
     String durationString = findStringStartsWith(log, "Duration:");
@@ -126,21 +113,17 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
    */
   public void testShouldPlayRemoteMP3Stream() {
     HttpRawResourceServer server = new HttpRawResourceServer(
-        getInstrumentation().getContext(), true);
+      getInstrumentation().getContext(), true);
     PlaybackServiceHelper tester = new PlaybackServiceHelper(
-        getInstrumentation().getTargetContext());
+      getInstrumentation().getTargetContext());
     try {
       server.init();
       server.start();
 
-      // bind a testing activity to the service that logs callbacks
-      tester.bind();
-
       // listen to our file
       PlaylistEntry entry = new PlaylistEntry(-1L, "http://127.0.0.1:"
-          + server.getPort() + "/one_second_silence_mp3", "Silent Stream test",
-          true, -1);
-      PlaybackService.setCurrent(entry);
+        + server.getPort() + "/one_second_silence_mp3", "Silent Stream test",
+        true, -1);
       tester.listen(entry);
 
       final int maxWait = 3 * 1000; // Play stream for 3 seconds
@@ -155,9 +138,6 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
 
     } finally {
       // Cleanup
-      if (tester != null) {
-        tester.destroy();
-      }
       server.stop();
     }
 
@@ -165,7 +145,7 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
     assertNotNull(tester);
     ArrayList<String> log = tester.getLog();
     assertNotNull("File never started playing.", findStringStartsWith(log,
-        "Prepared"));
+      "Prepared"));
 
   }
 
@@ -176,41 +156,29 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
    */
   public void testShouldStopPlayerIfMediaFailsAndNoOtherItemsExist() {
     final PlaybackServiceHelper tester = new PlaybackServiceHelper(
-        getInstrumentation().getTargetContext());
+      getInstrumentation().getTargetContext());
+    // listen to our file
+    final PlaylistEntry entry = new PlaylistEntry(-1L, "/dev/null",
+      "not-existent file", false, -1);
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        tester.listen(entry);
+      }
+    });
+    t.start();
+
+    // Wait 10 seconds to finish the prepared call
+    long maxWait = 10 * 1000;
+    long startTime = System.currentTimeMillis();
     try {
-      // bind a testing activity to the service that logs callbacks
-      tester.bind();
-
-      // listen to our file
-      final PlaylistEntry entry = new PlaylistEntry(-1L, "/dev/null",
-          "not-existent file", false, -1);
-      PlaybackService.setCurrent(entry);
-      Thread t = new Thread(new Runnable() {
-        @Override
-        public void run() {
-          tester.listen(entry);
-        }
-      });
-      t.start();
-
-      // Wait 10 seconds to finish the prepared call
-      long maxWait = 10 * 1000;
-      long startTime = System.currentTimeMillis();
-      try {
-        t.join(maxWait);
-      } catch (InterruptedException ex) {
-      }
-
-      assertTrue("PlaybackService blocked on listen call.", System
-          .currentTimeMillis()
-          - startTime < maxWait);
-
-    } finally {
-      // Cleanup
-      if (tester != null) {
-        tester.destroy();
-      }
+      t.join(maxWait);
+    } catch (InterruptedException ex) {
     }
+
+    assertTrue("PlaybackService blocked on listen call.", System
+      .currentTimeMillis()
+      - startTime < maxWait);
 
     assertNotNull(tester);
     assertTrue("File should complete.", tester.isComplete());
@@ -226,20 +194,17 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
   public void testShouldStopPlayerIfStreamBlocksAndNoOtherItemsExist() {
     BlockedHttpServer server = new BlockedHttpServer();
     final PlaybackServiceHelper tester = new PlaybackServiceHelper(
-        getInstrumentation().getTargetContext());
+      getInstrumentation().getTargetContext());
     try {
       server.init();
       server.start();
-      // bind a testing activity to the service that logs callbacks
-      tester.bind();
 
       // listen to our file
-      final PlaylistEntry entry = new PlaylistEntry(-1L, 
-          "http://127.0.0.1:" + server.getPort() + "/",
-          "Invalid stream test", 
-          true, // Don't bother using the StreamProxy 
-          -1);
-      PlaybackService.setCurrent(entry);
+      final PlaylistEntry entry = new PlaylistEntry(-1L,
+        "http://127.0.0.1:" + server.getPort() + "/",
+        "Invalid stream test",
+        true, // Don't bother using the StreamProxy
+        -1);
       Thread t = new Thread(new Runnable() {
         @Override
         public void run() {
@@ -257,14 +222,11 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
       }
 
       assertTrue("PlaybackService blocked on listen call.", System
-          .currentTimeMillis()
-          - startTime < maxWait);
+        .currentTimeMillis()
+        - startTime < maxWait);
 
     } finally {
       // Cleanup
-      if (tester != null) {
-        tester.destroy();
-      }
       server.stop();
     }
 
@@ -276,17 +238,14 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
   public void testShouldStopPlayerIfStreamFailsAndNoOtherItemsExist() {
     NullStreamServer server = new NullStreamServer();
     final PlaybackServiceHelper tester = new PlaybackServiceHelper(
-        getInstrumentation().getTargetContext());
+      getInstrumentation().getTargetContext());
     try {
       server.init();
       server.start();
-      // bind a testing activity to the service that logs callbacks
-      tester.bind();
 
       // listen to our file
       final PlaylistEntry entry = new PlaylistEntry(-1L, "http://127.0.0.1:"
-          + server.getPort() + "/", "Invalid stream test", false, -1);
-      PlaybackService.setCurrent(entry);
+        + server.getPort() + "/", "Invalid stream test", false, -1);
       Thread t = new Thread(new Runnable() {
         @Override
         public void run() {
@@ -304,14 +263,11 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
       }
 
       assertTrue("PlaybackService blocked on listen call.", System
-          .currentTimeMillis()
-          - startTime < maxWait);
+        .currentTimeMillis()
+        - startTime < maxWait);
 
     } finally {
       // Cleanup
-      if (tester != null) {
-        tester.destroy();
-      }
       server.stop();
     }
 
@@ -334,9 +290,9 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
   /**
    * A helper function to find a string within a list that starts with the given
    * prefix
-   * 
-   * @param list
-   * @param prefix
+   *
+   * @param list The list of strings to search
+   * @param prefix The prefix to find in the list
    * @return the first string in the list that matches or null if no match is
    *         found.
    */
@@ -353,12 +309,9 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
    * A stub class that connects to the PlaybackService and instruments it for
    * testing and inspection.
    */
-  private class PlaybackServiceHelper implements OnCompletionListener,
-      OnPreparedListener {
+  private class PlaybackServiceHelper {
 
     private final ArrayList<String> log = new ArrayList<String>();
-    private ServiceConnection conn;
-    private PlaybackService player;
     private boolean isComplete = false;
     private Context context = null;
 
@@ -367,58 +320,18 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
       this.context = context;
     }
 
-    public void bind() {
-      Intent serviceIntent = new Intent(context, PlaybackService.class);
-      conn = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-          log.add("Connected service");
-          player = ((PlaybackService.ListenBinder) service).getService();
-          onBindComplete((PlaybackService.ListenBinder) service);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-          log.add("Disconnected service");
-          player = null;
-        }
-
-      };
-
-      context.bindService(serviceIntent, conn, Context.BIND_AUTO_CREATE);
-    }
-
     public void listen(PlaylistEntry entry) {
-      if (conn == null) {
-        throw new IllegalStateException(
-            "You need to call bind() before calling listen().");
-      }
-
       Log.d(TAG, "Listening to " + entry.url);
-      // make sure the service is connected
-      int timeout = 30 * 1000; // Up to 30 seconds
-      int elapsed = 0;
-      while (player == null) {
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException ex) {
-        }
-        elapsed += 200;
-        if (elapsed > timeout) {
-          Log.e(TAG, "Timed out waiting for service to connect.");
-          return;
-        }
-      }
-      player.stop();
       try {
         isComplete = false;
-        player.listen(entry.url, entry.isStream);
+        Intent intent = new Intent(context, PlaybackService.class);
+        intent.setAction(PlaybackService.SERVICE_PLAY_SINGLE);
+        intent.putExtra(Playable.PLAYABLE_TYPE, Playable.PlayableFactory
+            .fromPlaylistEntry(entry));
+        context.startService(intent);
       } catch (IllegalArgumentException e) {
         Log.e(TAG, "Media play failure", e);
       } catch (IllegalStateException e) {
-        Log.e(TAG, "Media play failure", e);
-      } catch (IOException e) {
         Log.e(TAG, "Media play failure", e);
       }
     }
@@ -430,36 +343,5 @@ public class PlaybackServiceTest extends InstrumentationTestCase {
     public ArrayList<String> getLog() {
       return log;
     }
-
-    // For each of these methods log the events and use them for
-    // assertions and analytics
-    private void onBindComplete(PlaybackService.ListenBinder binder) {
-      log.add("Bound service.");
-      player.setOnCompletionListener(this);
-      player.setOnPreparedListener(this);
-    }
-
-    public void destroy() {
-      log.add("Destroyed");
-      if (player != null) {
-        player.stop();
-      }
-      context.unbindService(conn);
-    }
-
-    @Override
-    public void onCompletion(MediaPlayer mp) {
-      log.add("Done playing.");
-      log.add("Final position: " + mp.getCurrentPosition());
-      isComplete = true;
-    }
-
-    @Override
-    public void onPrepared(MediaPlayer mp) {
-      log.add("Prepared.");
-      log.add("Duration: " + mp.getDuration());
-    }
-
   }
-
 }

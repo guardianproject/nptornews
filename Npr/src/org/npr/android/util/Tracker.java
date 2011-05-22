@@ -6,66 +6,74 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 import com.google.android.apps.analytics.GoogleAnalyticsTracker;
 
-public class Tracker {
-  private static Tracker tracker;
-  private static final String LOG_TAG = Tracker.class.getName();
-  private static final boolean OMNITURE_PRESENT;
-  private static final String OMNITURE_APP_MEASUREMENT =
-      "com.omniture.android.AppMeasurement";
-  @SuppressWarnings("unchecked")
-  private static Class MEASUREMENT_CLASS;
+import java.util.HashMap;
+import java.util.Map;
 
-  private ExecutorService executorService;
-  private Object omnitureMeasurement;
+public class Tracker {
+  private static final String LOG_TAG = Tracker.class.getName();
+
+  private static Tracker tracker;
+  public static final String PAGE_NAME_SEPARATOR = ": ";
+
   private final Application application;
   
-  private  GoogleAnalyticsTracker gatracker = null;
+  private  GoogleAnalyticsTracker gaTracker = null;
 
-  public static final String PAGE_NAME_SEPARATOR = ": ";
   public static Tracker instance(Application application) {
     if (tracker == null) {
       tracker = new Tracker(application);
     }
-    tracker.begin();
     return tracker;
   }
 
-  static {
-    try {
-      MEASUREMENT_CLASS = Class.forName(OMNITURE_APP_MEASUREMENT);
-    } catch (ClassNotFoundException e) {
-      MEASUREMENT_CLASS = null;
-    }
-    OMNITURE_PRESENT = MEASUREMENT_CLASS != null;
-    Log.w("  !!TRACKER", "omniture is " + OMNITURE_PRESENT);
-  }
 
   public Tracker(Application application) {
     this.application = application;
     
     if (!isDebuggableSet()) {
-      gatracker = GoogleAnalyticsTracker.getInstance();
+      gaTracker = GoogleAnalyticsTracker.getInstance();
 
       // Start the tracker in manual dispatch mode.
       // Remember to dispatch() after every trackPageView
-      gatracker.start("UA-5828686-6", application);
-      gatracker.trackPageView("/version%20" + getVersionName());
-      gatracker.dispatch();
+      gaTracker.start("UA-5828686-6", application);
+      gaTracker.trackPageView("/version%20" + getVersionName());
+      Log.d(LOG_TAG, "Tracking version " + getVersionName());
+      gaTracker.dispatch();
+    } else {
+      Log.d(LOG_TAG, "Not tracking debuggable is set");
     }
   }
+
+  public void finish() {
+    if (gaTracker != null) {
+      gaTracker.stop();
+    }
+  }
+
+  public void trackPage(ActivityMeasurement activityMeasurement) {
+    if (gaTracker != null) {
+      // pass %20 instead of blanks to get blanks to appear in Analytics reports
+      String gaPageName = activityMeasurement.pageName.replace(" ", "%20");
+      gaTracker.trackPageView("/" + gaPageName);
+      Log.d(LOG_TAG, "Tracking page /" + gaPageName);
+      gaTracker.dispatch();
+    }
+  }
+
+  public void trackLink(LinkEvent event) {
+    if (gaTracker != null) {
+      gaTracker.trackEvent(
+          event.getCategory(),
+          event.getAction(),
+          event.getLabel(),
+          event.getValue());
+    }
+    Log.d(LOG_TAG, "Tracking link " + event.getCategory() + "/" +
+        "" + event.getAction() + " " + event.getLabel());
+  }
+
 
   private boolean isDebuggableSet() {
     int flags = 0;
@@ -73,16 +81,13 @@ public class Tracker {
       PackageInfo pi = application.getPackageManager().getPackageInfo(
           application.getPackageName(), 0);
       flags = pi.applicationInfo.flags;
-    } catch (PackageManager.NameNotFoundException e) { }
+    } catch (PackageManager.NameNotFoundException ignored) { }
 
-    if ((flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
-      return true;
-    }
-    return false;
+    return (flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
   }
 
   private String getVersionName() {
-    String version = "";
+    String version;
     try {
       PackageInfo pi = application.getPackageManager().getPackageInfo(
           application.getPackageName(), 0);
@@ -93,188 +98,7 @@ public class Tracker {
     return version;
   }
 
-  /**
-   * Must be called after instantiation, or when main Activity is restarted.
-   */
-  private void begin() {
-    executorService = Executors.newSingleThreadExecutor();
-  }
 
-  public void finish() {
-    if (gatracker != null) {
-      gatracker.stop();
-    }
-    try {
-      // Attempt to let the tracker do its job before we die.
-      executorService.shutdown();
-      // Give it one second
-      executorService.awaitTermination(1000, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      Log.e(LOG_TAG, "awaiting tracker completion", e);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private Object createMeasurement() throws IllegalAccessException,
-      InstantiationException, SecurityException, NoSuchMethodException,
-      IllegalArgumentException, InvocationTargetException {
-    Object result = null;
-    if (omnitureMeasurement != null) {
-      result = omnitureMeasurement;
-
-      Method clearVars = MEASUREMENT_CLASS.getMethod("clearVars");
-      clearVars.invoke(result);
-    } else {
-      Class[] typeList = { Application.class };
-      Constructor constructor = MEASUREMENT_CLASS.getConstructor(typeList);
-      Object[] argList = { application };
-      result = omnitureMeasurement = constructor.newInstance(argList);
-    }
-    return result;
-  }
-
-  private Object populateDefaultFields(Object s) throws SecurityException,
-      NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
-
-    // Specify the Report Suite ID(s) to track here
-    Field account = MEASUREMENT_CLASS.getField("account");
-    account.set(s, "nprnprandroiddev");
-
-    Field currencyCode = MEASUREMENT_CLASS.getField("currencyCode");
-    currencyCode.set(s, "USD");
-
-    Field linkLeaveQueryString =
-        MEASUREMENT_CLASS.getField("linkLeaveQueryString");
-    linkLeaveQueryString.setBoolean(s, true);
-
-    /*
-     * WARNING: Changing any of the below variables will cause drastic changes
-     * to how your visitor data is collected. Changes should only be made when
-     * instructed to do so by your account manager.
-     */
-    Field dc = MEASUREMENT_CLASS.getField("dc");
-    dc.set(s, "122");
-
-    /* Configure debugging here */
-    Field debugTracking = MEASUREMENT_CLASS.getField("debugTracking");
-    debugTracking.setBoolean(s, false);
-
-    return s;
-  }
-
-  public void trackPage(ActivityMeasurement activityMeasurement) {
-    
-    if (gatracker != null) {
-      // pass %20 instead of blanks to get blanks to appear in Analytics reports
-      String gaPageName = activityMeasurement.pageName.replace(" ", "%20");
-      gatracker.trackPageView("/" + gaPageName);
-      gatracker.dispatch();
-    }
-
-    // Any Omniture failures (including not being present) will result in all
-    // future calls to be no-ops.
-    if (!OMNITURE_PRESENT) {
-      return;
-    }
-
-    final ActivityMeasurement internalMapping = activityMeasurement;
-    
-    // Ensures that only one invocation will happen at a time, since Omniture is
-    // not thread-safe, and should not put much burden on the user experience.
-    executorService.execute(new Runnable() {
-      @Override
-      public void run() {
-        invokeTrack(internalMapping);
-      }
-    });
-  }
-
-  private void invokeTrack(ActivityMeasurement internalMapping) {
-    try {
-      Object s = createMeasurement();
-      populateDefaultFields(s);
-
-      for (Entry<String, String> value : internalMapping.values.entrySet()) {
-        Field f = MEASUREMENT_CLASS.getField(value.getKey());
-        f.set(s, value.getValue());
-      }
-      synchronized (this) {
-        /*
-         * NOTE: App Measurement for Android is not thread-safe. You can use it
-         * in a multi-threaded application, but you cannot access it from
-         * multiple threads.
-         */
-        Method track = MEASUREMENT_CLASS.getMethod("track", new Class[] {});
-        track.invoke(s);
-      }
-
-    } catch (SecurityException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (IllegalArgumentException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (IllegalAccessException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (InstantiationException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (NoSuchMethodException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (InvocationTargetException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (NoSuchFieldException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    }
-  }
-
-  private void invokeTrackLink(LinkEvent event) {
-    try {
-      Object s = createMeasurement();
-
-      for (Entry<String, String> value : event.values.entrySet()) {
-        Field f = MEASUREMENT_CLASS.getField(value.getKey());
-        f.set(s, value.getValue());
-      }
-      synchronized (this) {
-        /*
-         * NOTE: App Measurement for Android is not thread-safe. You can use it
-         * in a multi-threaded application, but you cannot access it from
-         * multiple threads.
-         */
-        Method trackLink =
-            MEASUREMENT_CLASS.getMethod("trackLink", new Class[] {String.class,
-                String.class, String.class});
-        trackLink.invoke(s, null, "o", event.linkName);
-      }
-
-    } catch (SecurityException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (IllegalArgumentException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (IllegalAccessException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (InstantiationException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (NoSuchMethodException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (InvocationTargetException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    } catch (NoSuchFieldException e) {
-      Log.e(LOG_TAG, "error obtaining tracker", e);
-    }
-  }
-  
-  public void trackLink(LinkEvent event) {
-    if (!OMNITURE_PRESENT) {
-      return;
-    }
-
-    final LinkEvent e = event;
-    executorService.execute(new Runnable() {
-      @Override
-      public void run() {
-        invokeTrackLink(e);
-      }
-    });
-  }
 
   public static class ActivityMeasurement {
     public ActivityMeasurement(String pageName, String channel, String orgId) {
@@ -466,132 +290,69 @@ public class Tracker {
 
   
   public static class LinkEvent {
-    public LinkEvent(String linkName, String event) {
-      this.linkName = linkName;
-      values = new HashMap<String, String>();
+    private String category;
+    private String action;
+    private String label;
+    private int value;
 
-      values.put(linkNameVars[0], linkName);
-      
-      values.put(eventsVars[0], event);
+    public LinkEvent(String category, String action, String label,
+                     int value) {
+      this.category = category;
+      this.action = action;
+      this.label = label;
+      this.value = value;
     }
 
-    protected final String linkName;
-    private static String[] linkNameVars = new String[] {"linkName"};
-    protected Map<String, String> values;
-    protected static String[] eventsVars = new String[] {"events"};
-
-  }
-  
-  public static class PlayNowEvent extends LinkEvent {
-    protected PlayNowEvent(String storyId, String mediaTitle, String mediaId,
-        String event) {
-      super(storyId + "-" + mediaTitle, event);
-      
-      values.put(linkNameVars[0], storyId + "-" + mediaTitle);
-
-      values.put(mediaVars[0], storyId + "-" + mediaId);
-      values.put(mediaVars[1], storyId + "-" + mediaId);
-
-      values.put(randVars[0], "1");
-      values.put(randVars[1], "1");
-    }
-    
-    public PlayNowEvent(String storyId, String mediaTitle, String mediaId) {
-      this(storyId, mediaTitle, mediaId, "event6");
-    }
-    // Link name and eVar18= "storyID-mediaTitle"
-    private static String[] linkNameVars = new String[] {"eVar18"};
-
-    // prop36/eVar36 set to "storyID-mediaID"
-    private static String[] mediaVars = new String[] {"prop36", "eVar36"};
-
-    // prop25/eVar25 set to "1"
-    private static String[] randVars = new String[] {"prop25", "eVar25"};
-  }
-  
-  public static class PlayLaterEvent extends PlayNowEvent {
-
-    public PlayLaterEvent(String storyId, String mediaTitle, String mediaId) {
-      super(storyId, mediaTitle, mediaId, "event23");
-    }
-  }
-
-  public static class PodcastNowEvent extends LinkEvent {
-    protected PodcastNowEvent(String title, String episode, String url,
-        String event) {
-      super(String.format("Podcast: %s: %s", title, episode), event);
-      
-      values.put(linkNameVars[0], linkName);
-
-      values.put(podcastVars[0], "Podcast");
-      values.put(podcastVars[1], "Podcast");
-      
-      values.put(uriVars[0], url);
-      values.put(uriVars[1], url);
-
-      values.put(randVars[0], "10");
-      values.put(randVars[1], "10");
-    }
-    
-    public PodcastNowEvent(String title, String episode, String url) {
-      this(title, episode, url, "event6");
+    public LinkEvent(String category, String action, String label) {
+      this.category = category;
+      this.action = action;
+      this.label = label;
     }
 
-    // Link name and eVar18 = "Podcast: Podcast Title: Episode Title"
-    private static String[] linkNameVars = new String[] {"eVar18"};
+    public LinkEvent(String category, String action) {
+      this.category = category;
+      this.action = action;
+    }
 
-    // prop36/eVar36 set to "Podcast"
-    private static String[] podcastVars = new String[] {"prop36", "eVar36"};
+    public int getValue() {
+      return value;
+    }
 
-    // prop27/eVar27 set to Podcast URI
-    private static String[] uriVars = new String[] {"prop27", "eVar27"};
-    
-    //  prop25/eVar25 set to "10"
-    private static String[] randVars = new String[] {"prop25", "eVar25"};
-  }
-  
-  public static class PodcastLaterEvent extends PlayNowEvent {
+    public String getCategory() {
+      return category;
+    }
 
-    public PodcastLaterEvent(String storyId, String mediaTitle, String mediaId) {
-      super(storyId, mediaTitle, mediaId, "event25");
+    public String getAction() {
+      return action;
+    }
+
+    public String getLabel() {
+      return label;
     }
   }
   
-  public static class StationSearchEvent extends LinkEvent {
-
-    public StationSearchEvent() {
-      super("Select Station Dialog", "event15");
+  public static class PlayEvent extends LinkEvent {
+    public PlayEvent(String url) {
+      super("Audio", "Play", url);
     }
-    // Dialog for GPS/Zip Code/Call Letters search activated
-    // event15
-    // Link name = "Select Station Dialog"
-    // No additional props/eVars
   }
 
-  public static class StationStreamEvent extends LinkEvent {
-
-    public StationStreamEvent(String stationName, String streamName) {
-      super(String.format("Station Stream: %s: %s", stationName, streamName),
-          "event26");
-      values.put(linkNameVars[0], linkName);
-
-      values.put(streamVars[0], "Station Stream");
-      values.put(streamVars[1], "Station Stream");
-
-      values.put(randVars[0], "20");
-      values.put(randVars[1], "20");
+  public static class PauseEvent extends LinkEvent {
+    public PauseEvent(String url) {
+      super("Audio", "Pause", url);
     }
-
-    private static String[] linkNameVars = new String[] {"eVar18"};
-    // Station stream launched
-    // event26
-    // Link name and eVar18 = "Station Stream: Station Name: Stream Name"
-
-    // prop36/eVar36 set to "Station Stream"
-    private static String[] streamVars = new String[] {"prop36", "eVar36"};
-
-    // prop25/eVar25 set to "20"
-    private static String[] randVars = new String[] {"prop25", "eVar25"};
-
   }
+
+  public static class StopEvent extends LinkEvent {
+    public StopEvent(String url) {
+      super("Audio", "Stop", url);
+    }
+  }
+
+  public static class AddToPlaylistEvent extends LinkEvent {
+    public AddToPlaylistEvent(String url) {
+      super("Add To Playlist", "Add", url);
+    }
+  }
+
 }

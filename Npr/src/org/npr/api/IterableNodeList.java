@@ -14,14 +14,14 @@
 
 package org.npr.api;
 
-import java.util.Iterator;
-
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import java.util.Iterator;
+
 public class IterableNodeList implements Iterable<Node>, Iterator<Node> {
   private final NodeList nodeList;
-  int index = 0;
+  private int index = 0;
 
   public IterableNodeList(NodeList nodeList) {
     this.nodeList = nodeList;
@@ -39,8 +39,7 @@ public class IterableNodeList implements Iterable<Node>, Iterator<Node> {
 
   @Override
   public Node next() {
-    Node item = nodeList.item(index++);
-    return item;
+    return nodeList.item(index++);
   }
 
   @Override

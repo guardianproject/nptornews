@@ -82,4 +82,8 @@ public class ApiConstants {
   public static ApiConstants instance() {
     return instance;
   }
+
+  public boolean apiKeyIsValid() {
+    return apiKey != null && apiKey.length() > 0;
+  }
 }

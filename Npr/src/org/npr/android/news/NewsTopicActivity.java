@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,72 +19,71 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.AdapterView.OnItemClickListener;
+import android.widget.Toast;
 
 import org.npr.android.util.Tracker;
 import org.npr.android.util.Tracker.ActivityMeasurement;
 import org.npr.api.ApiConstants;
-import org.npr.api.Program;
 import org.npr.api.StoryGrouping;
 import org.npr.api.Topic;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class NewsTopicActivity extends PlayerActivity implements
+public class NewsTopicActivity extends TitleActivity implements
     OnItemClickListener {
+  private static final String LOG_TAG = NewsTopicActivity.class.getName();
+  // Only show topics from this predefined selection
+  // See http://m.npr.org/news for the preferred list
+  private static final int[] selectedTopics =
+      new int[]{1003, 1004, 1014, 1006, 1106, 1007, 1128, 1019, 1008, 1032};
 
-  public static enum TopicType {
-    TOPICS(R.string.msg_main_subactivity_topics),
-    PROGRAMS(R.string.msg_main_subactivity_programs),
-    ;
-    private int title;
-
-    private TopicType(int title) {
-      this.title = title;
-    }
-    
-  }
-
-  private Handler handler = new Handler() {
+  private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
       switch (msg.what) {
         case 0:
           listView.setAdapter(listAdapter);
+          stopIndeterminateProgressIndicator();
           break;
+        default:
+          Toast.makeText(NewsTopicActivity.this,
+              getResources().getText(R.string.msg_check_connection),
+              Toast.LENGTH_LONG)
+              .show();
       }
     }
   };
 
   private ListAdapter listAdapter;
   private ListView listView;
-  private Thread listInitThread;
-  private TopicType topic = null;
 
   @SuppressWarnings("unchecked")
   private int constructList() {
-    int type = getIntent().getIntExtra(Constants.EXTRA_SUBACTIVITY_ID, -1);
-    List<? extends StoryGrouping> groupings = null;
-    switch (topic) {
-      case TOPICS:
-        groupings =
-            Topic.factory.downloadStoryGroupings(30);
-        listAdapter = new NewsTopicAdapter<Topic>((List<Topic>) groupings); 
-        break;
-      case PROGRAMS:
-        groupings =
-            Program.factory.downloadStoryGroupings(30);
-        listAdapter = new NewsTopicAdapter<Program>((List<Program>) groupings); 
-        break;
+    List<? extends StoryGrouping> groupings =
+        Topic.factory.downloadStoryGroupings(-1);
+    ArrayList<Topic> filteredList =
+        new ArrayList<Topic>(selectedTopics.length);
+    for (int i : selectedTopics) {
+      for (StoryGrouping topic : groupings) {
+        if (topic.getId().equals(Integer.toString(i))) {
+          filteredList.add((Topic) topic);
+          break;
+        }
+      }
     }
+    listAdapter = new NewsTopicAdapter<Topic>(filteredList);
     int message = 0;
 
     if (groupings == null) {
@@ -94,26 +94,18 @@ public class NewsTopicActivity extends PlayerActivity implements
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
-    int type = getIntent().getIntExtra(Constants.EXTRA_SUBACTIVITY_ID, -1);
-    switch (type) {
-      case R.string.msg_main_subactivity_topics:
-        topic = TopicType.TOPICS;
-        break;
-      case R.string.msg_main_subactivity_programs:
-        topic = TopicType.PROGRAMS;
-        break;
-    }
     super.onCreate(savedInstanceState);
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news_topics, container);
-    listView = (ListView) findViewById(R.id.ListView01);
+    listView = (ListView) findViewById(R.id.topic_list);
     listView.setOnItemClickListener(this);
 
     initializeList();
   }
 
   private void initializeList() {
-    listInitThread = new Thread(new Runnable() {
+    startIndeterminateProgressIndicator();
+    Thread listInitThread = new Thread(new Runnable() {
       public void run() {
         int result = NewsTopicActivity.this.constructList();
         handler.sendEmptyMessage(result);
@@ -124,7 +116,7 @@ public class NewsTopicActivity extends PlayerActivity implements
 
   @Override
   public CharSequence getMainTitle() {
-    return getString(topic.title);
+    return getString(R.string.msg_main_title_topics);
   }
 
   @Override
@@ -135,40 +127,53 @@ public class NewsTopicActivity extends PlayerActivity implements
   }
 
   @Override
-  public boolean isRefreshable(){
+  public boolean isRefreshable() {
     return true;
   }
 
   @Override
-  public void refresh(){
+  public void refresh() {
     initializeList();
   }
-  
+
+  // TODO: Replace this with an ArrayList and default list item layout
   private class NewsTopicAdapter<T extends StoryGrouping> extends
       ArrayAdapter<T> {
+
     public NewsTopicAdapter(List<T> groupings) {
-      super(NewsTopicActivity.this, android.R.layout.simple_list_item_1,
+      super(NewsTopicActivity.this, R.layout.news_topic_item,
           android.R.id.text1, groupings);
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+      View v = super.getView(position, convertView, parent);
+      ImageView icon = (ImageView) v.findViewById(R.id.icon);
+      if (icon != null) {
+        icon.setVisibility(View.INVISIBLE);
+      } else {
+        Log.e(LOG_TAG, "Could not find 'icon' view in list item at position "
+            + position);
+      }
+
+      return v;
     }
   }
 
   @Override
   public void onItemClick(AdapterView<?> parent, View view, int position,
-      long id) {
-    int type = getIntent().getIntExtra(Constants.EXTRA_SUBACTIVITY_ID, -1);
+                          long id) {
     StoryGrouping item = (StoryGrouping) parent.getItemAtPosition(position);
 
-    String grouping = getString(type);
+    String grouping = getString(
+        getIntent().getIntExtra(Constants.EXTRA_SUBACTIVITY_ID, -1)
+    );
     String description = item.getTitle();
     String topicId = item.getId();
     Map<String, String> params = new HashMap<String, String>();
     params.put(ApiConstants.PARAM_ID, topicId);
     params.put(ApiConstants.PARAM_FIELDS, ApiConstants.STORY_FIELDS);
     params.put(ApiConstants.PARAM_SORT, "assigned");
-    if (topic == TopicType.PROGRAMS){ 
-      params.put(ApiConstants.PARAM_DATE, "current");
-    }
-
     String url =
         ApiConstants.instance().createUrl(ApiConstants.STORY_PATH, params);
 

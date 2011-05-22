@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <View
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:background="@color/dark_grey"
+  android:background="@drawable/divider"
+  android:paddingTop="10dp"
+  android:paddingBottom="15dp"
   android:layout_width="fill_parent"
-  android:layout_height="1dip" />
+  android:layout_height="25dp" />

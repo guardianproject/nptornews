@@ -16,8 +16,8 @@ package org.npr.api;
 
 
 public class Topic extends StoryGrouping {
-  public static StoryGroupingFactory<Topic> factory =
-    StoryGroupingFactory.getFactory(Topic.class, "3002");
+  public static final StoryGroupingFactory<Topic> factory =
+    new StoryGroupingFactory<Topic>(Topic.class, "3002");
 
   public Topic(String id, String title, int storycounttoday,
       int storycountmonth, int storycountall, String additionalInfo) {

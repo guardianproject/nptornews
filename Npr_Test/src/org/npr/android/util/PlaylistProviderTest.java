@@ -25,7 +25,6 @@ import android.test.IsolatedContext;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 
-import org.npr.android.util.PlaylistProvider;
 import org.npr.android.util.PlaylistProvider.Items;
 import org.npr.android.util.PlaylistProvider.PlaylistHelper;
 
@@ -47,7 +46,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
     Context context = new MockContext() {
       @Override
       public SQLiteDatabase openOrCreateDatabase(String file, int mode,
-          SQLiteDatabase.CursorFactory factory) {
+                                                 SQLiteDatabase.CursorFactory factory) {
         return db;
       }
 
@@ -58,7 +57,7 @@ public class PlaylistProviderTest extends AndroidTestCase {
 
       @Override
       public int checkUriPermission(Uri uri, String readPermission,
-          String writePermission, int pid, int uid, int modeFlags) {
+                                    String writePermission, int pid, int uid, int modeFlags) {
         return PackageManager.PERMISSION_GRANTED;
       }
     };
@@ -116,19 +115,19 @@ public class PlaylistProviderTest extends AndroidTestCase {
     db.insertOrThrow(PlaylistProvider.TABLE_NAME, Items.NAME, values);
 
     assertEquals(3, DatabaseUtils.queryNumEntries(db,
-        PlaylistProvider.TABLE_NAME));
+      PlaylistProvider.TABLE_NAME));
   }
 
-  public void testGetMaxEmpty() {
-    mockHelper.getWritableDatabase();
-
-    assertEquals(-1, PlaylistProvider.getMax(getContext(), mockHelper));
-  }
-
-  public void testGetMax() {
+  public void testItemsHaveOrder() {
     insertRecords();
 
-    assertEquals(2, PlaylistProvider.getMax(getContext(), mockHelper));
+    String[] args = new String[1];
+    for (int i = 0; i < 3; i++) {
+      args[i] = Integer.toString(i);
+      assertEquals(Integer.toString(i), DatabaseUtils.stringForQuery(db,
+        "SELECT " + Items.PLAY_ORDER + " FROM " + PlaylistProvider.TABLE_NAME
+          + " WHERE " + Items._ID + " = ?", args));
+    }
   }
 
   public void testInsert() {
@@ -138,10 +137,10 @@ public class PlaylistProviderTest extends AndroidTestCase {
     values.put(Items.IS_READ, false);
     values.put(Items.PLAY_ORDER, 2);
     getContext().getContentResolver().insert(PlaylistProvider.CONTENT_URI,
-        values);
+      values);
 
     assertEquals(1, DatabaseUtils.queryNumEntries(db,
-        PlaylistProvider.TABLE_NAME));
+      PlaylistProvider.TABLE_NAME));
   }
 
   public void testInsertMultiple() {
@@ -153,9 +152,9 @@ public class PlaylistProviderTest extends AndroidTestCase {
     values.put(Items.IS_READ, false);
     values.put(Items.PLAY_ORDER, 2);
     getContext().getContentResolver().insert(PlaylistProvider.CONTENT_URI,
-        values);
+      values);
 
     assertEquals(4, DatabaseUtils.queryNumEntries(db,
-        PlaylistProvider.TABLE_NAME));
+      PlaylistProvider.TABLE_NAME));
   }
 }

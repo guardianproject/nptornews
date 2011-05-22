@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,18 +17,21 @@ package org.npr.android.news;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import org.apache.http.client.ClientProtocolException;
-import org.npr.android.util.TypefaceCache;
+import org.npr.android.util.PlaylistRepository;
 import org.npr.api.Client;
 import org.npr.api.Story;
 import org.npr.api.Story.Audio;
@@ -35,43 +39,57 @@ import org.npr.api.Story.StoryFactory;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.List;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 
 public class NewsListAdapter extends ArrayAdapter<Story> {
   private static final String LOG_TAG = NewsListAdapter.class.getName();
-  private LayoutInflater inflater;
-  private static Typeface headlineTypeface = null;
+  private final LayoutInflater inflater;
+  private final ImageThreadLoader imageLoader;
+  private RootActivity rootActivity = null;
+  private final PlaylistRepository repository;
 
   public NewsListAdapter(Context context) {
     super(context, R.layout.news_item);
-    inflater = LayoutInflater.from(getContext());
-    if (headlineTypeface == null) {
-      headlineTypeface =
-          TypefaceCache.getTypeface("fonts/Georgia.ttf", context);
+    if (context instanceof RootActivity) {
+      rootActivity = (RootActivity) context;
     }
+    inflater = LayoutInflater.from(getContext());
+    imageLoader = ImageThreadLoader.getOnDiskInstance(context);
+    repository = new PlaylistRepository(getContext().getApplicationContext(),
+        context.getContentResolver());
   }
 
   private List<Story> moreStories;
   private boolean endReached = false;
-  
-  private Handler handler = new Handler() {
+
+  private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
-      if (moreStories != null) {
-        remove(null);
-        for (Story s : moreStories) {
-          if (getPosition(s) < 0) {
-            add(s);
+      if (msg.what >= 0) {
+        if (moreStories != null) {
+          remove(null);
+          for (Story s : moreStories) {
+            if (getPosition(s) < 0) {
+              add(s);
+            }
+          }
+          if (!endReached) {
+            add(null);
           }
         }
-        if (!endReached) {
-          add(null);          
-        }
+      } else {
+        Toast.makeText(rootActivity,
+            rootActivity.getResources()
+                .getText(R.string.msg_check_connection),
+            Toast.LENGTH_LONG).show();
       }
+      if (rootActivity != null) {
+        rootActivity.stopIndeterminateProgressIndicator();
+      }
+
     }
   };
 
@@ -89,63 +107,122 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   }
 
   @Override
-  public View getView(int position, View convertView, ViewGroup parent) {
+  public View getView(final int position, View convertView, final ViewGroup parent) {
+
     if (convertView == null) {
       convertView = inflater.inflate(R.layout.news_item, parent, false);
     }
 
     Story story = getItem(position);
 
-    ImageView image = (ImageView) convertView.findViewById(R.id.NewsItemImage);
+    ImageView icon = (ImageView) convertView.findViewById(R.id.NewsItemIcon);
     TextView teaser = (TextView) convertView.findViewById(R.id.NewsItemTeaserText);
-    TextView name = (TextView) convertView.findViewById(R.id.NewsItemNameText);      
+    TextView name = (TextView) convertView.findViewById(R.id.NewsItemNameText);
+    final ImageView image = (ImageView) convertView.findViewById(R.id.NewsItemImage);
 
     if (story != null) {
-      image.setImageDrawable(getContext().getResources().getDrawable(
-          isPlayable(story) ? R.drawable.icon_listen_main : R.drawable.bullet));
-      image.setVisibility(View.VISIBLE);
-      name.setTypeface(headlineTypeface, Typeface.NORMAL);
-      name.setText(story.toString());
+      if (isPlayable(story)) {
+        if (repository.getPlaylistItemFromStoryId(story.getId()) == null) {
+          icon.setImageDrawable(
+              getContext().getResources().getDrawable(R.drawable.speaker)
+          );
+        } else {
+          icon.setImageDrawable(
+              getContext().getResources().getDrawable(R.drawable
+                  .news_item_in_playlist)
+          );
+        }
+        icon.setVisibility(View.VISIBLE);
+      } else {
+        // Because views are re-used we have to set this each time
+        icon.setVisibility(View.INVISIBLE);
+      }
+
+      name.setText(Html.fromHtml(story.toString()));
+
+      // Need to (re)set this because the views are reused. If we don't then
+      // while scrolling, some items will replace the old "Load more stories"
+      // view and will be in italics
+      name.setTypeface(name.getTypeface(), Typeface.BOLD);
+
       String teaserText = story.getMiniTeaser();
       if (teaserText == null) {
         teaserText = story.getTeaser();
       }
       if (teaserText != null && teaserText.length() > 0) {
-        // Disable for now.
-//        teaser.setText(story.getTeaser());
-//        teaser.setVisibility(View.VISIBLE);
+        teaser.setText(Html.fromHtml(teaserText));
+        teaser.setVisibility(View.VISIBLE);
       } else {
-        teaser.setVisibility(View.INVISIBLE);
+        teaser.setVisibility(View.GONE);
       }
-      teaser.setVisibility(View.GONE);
+      if (story.getImages().size() > 0) {
+        final String url = story.getImages().get(0).getSrc();
+        Drawable cachedImage = null;
+        cachedImage = imageLoader.loadImage(
+            url,
+            new ImageThreadLoader.ImageLoadedListener() {
+              public void imageLoaded(Drawable imageBitmap) {
+                View itemView = parent.getChildAt(position -
+                    ((ListView) parent).getFirstVisiblePosition());
+                if (itemView == null) {
+                  Log.w(LOG_TAG, "Could not find list item at position " +
+                      position);
+                  return;
+                }
+                ImageView img = (ImageView)
+                    itemView.findViewById(R.id.NewsItemImage);
+                if (img == null) {
+                  Log.w(LOG_TAG, "Could not find image for list item at " +
+                      "position " + position);
+                  return;
+                }
+                img.setImageDrawable(imageBitmap);
+              }
+            }
+        );
+
+        image.setImageDrawable(cachedImage);
+
+        image.setVisibility(View.VISIBLE);
+      } else {
+        image.setVisibility(View.GONE);
+      }
     } else {
       // null marker means it's the end of the list.
-      image.setVisibility(View.INVISIBLE);
+      icon.setVisibility(View.INVISIBLE);
       teaser.setVisibility(View.INVISIBLE);
-      name.setTypeface(Typeface.SANS_SERIF, Typeface.ITALIC);
+      image.setVisibility(View.GONE);
+      name.setTypeface(name.getTypeface(), Typeface.ITALIC);
       name.setText(R.string.msg_load_more);
     }
+
     return convertView;
   }
 
   public void addMoreStories(final String url, final int count) {
+    if (rootActivity != null) {
+      rootActivity.startIndeterminateProgressIndicator();
+    }
     new Thread(new Runnable() {
       @Override
       public void run() {
-        getMoreStories(url, count);
-        handler.sendEmptyMessage(0);
+        if (getMoreStories(url, count)) {
+          handler.sendEmptyMessage(0);
+        } else {
+          handler.sendEmptyMessage(-1);
+        }
       }
     }).start();
   }
-  
-  private void getMoreStories(String url, int count) {
+
+  private boolean getMoreStories(String url, int count) {
+
     Node stories = null;
     try {
       stories = new Client(url).execute();
-    } catch (ClientProtocolException e) {
-      Log.e(LOG_TAG, "", e);
     } catch (IOException e) {
       Log.e(LOG_TAG, "", e);
+      return false;
     } catch (SAXException e) {
       Log.e(LOG_TAG, "", e);
     } catch (ParserConfigurationException e) {
@@ -165,5 +242,25 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
         NewsListActivity.addAllToStoryCache(moreStories);
       }
     }
+
+    return true;
+  }
+
+  /**
+   * @return a comma-separated list of story ID's
+   */
+  public String getStoryIdList() {
+    StringBuilder ids = new StringBuilder();
+    for (int i = 0; i < getCount(); i++) {
+      Story story = getItem(i);
+      if (story != null) {
+        ids.append(story.getId()).append(",");
+      }
+    }
+    String result = ids.toString();
+    if (result.endsWith(",")) {
+      result = result.substring(0, result.length() - 1);
+    }
+    return result;
   }
 }

@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,17 +24,17 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.parsers.ParserConfigurationException;
-
 public class Station {
-  public static final String LOG_TAG = Station.class.getName();
+  private static final String LOG_TAG = Station.class.getName();
   private final String id;
   private final String name;
   private final String marketCity;
@@ -126,27 +127,35 @@ public class Station {
   
   @Override
   public String toString() {
-    return new StringBuilder()
-        .append(name).append(" - ")
-        .append(frequency).append(" ")
-        .append(band).append(", ")
-        .append(marketCity)
-        .toString();
+    StringBuilder sb = new StringBuilder(name);
+    sb.append(" ");
+    sb.append(marketCity);
+    // TODO: Add market state if the feed has it?
+    sb.append(" ");
+    sb.append(frequency);
+    sb.append(band);
+    return sb.toString();
   }
 
   public static class StationBuilder {
-    private final String id;
+    private String id;
     private String name;
     private String marketCity;
     private String frequency;
     private String band;
-    private List<AudioStream> audioStreams;
-    private List<Podcast> podcasts;
+    private List<AudioStream> audioStreams = new LinkedList<AudioStream>();
+    private List<Podcast> podcasts = new LinkedList<Podcast>();
     private String tagline;
     private String image;
 
+
     public StationBuilder(String id) {
       this.id = id;
+    }
+
+    public StationBuilder withId(String id) {
+      this.id = id;
+      return this;
     }
 
     public StationBuilder withName(String name) {
@@ -197,10 +206,18 @@ public class Station {
 
   public static class StationFactory {
     public static List<Station> parseStations(Node rootNode) {
+      if (rootNode.getNodeName().equals("rss")) {
+        return parseRssStationList(rootNode);
+      }
+
+      return parseNprmlStationList(rootNode);
+    }
+
+    private static List<Station> parseNprmlStationList(Node rootNode) {
       List<Station> result = new ArrayList<Station>();
       NodeList stationList = rootNode.getChildNodes();
       for (Node stationNode : new IterableNodeList(stationList)) {
-        Station station = createStation(stationNode);
+        Station station = createNprmlStation(stationNode);
         if (station != null) {
           result.add(station);
         }
@@ -208,13 +225,87 @@ public class Station {
       return result;
     }
 
-    private static Station createStation(Node node) {
+    private static List<Station> parseRssStationList(Node rootNode) {
+      List<Station> result = new ArrayList<Station>();
+
+      for (Node channelNode : new IterableNodeList(rootNode.getChildNodes())) {
+        if (channelNode.getNodeName().equals("channel")) {
+          NodeList stationList = channelNode.getChildNodes();
+          for (Node stationNode : new IterableNodeList(stationList)) {
+            Station station = createRssStation(stationNode);
+            if (station != null &&
+                // Only show stations with audio as this is 'find live streams'
+                station.getAudioStreams().size() > 0) {
+              result.add(station);
+            }
+          }
+        }
+      }
+      return result;
+    }
+
+
+    private static Station createRssStation(Node node) {
+      if (!node.getNodeName().equals("item") ||
+          !node.hasChildNodes()) {
+        return null;
+      }
+
+      StationBuilder sb = new StationBuilder(
+          // Create an default ID because some stations don't have one
+          Long.toHexString(new Date().getTime() * 1000 + (long)(Math.random()
+              * 1000))
+      );
+
+      List<AudioStream> streams = new LinkedList<AudioStream>();
+      String callLetters = null;
+
+      for (Node n : new IterableNodeList(node.getChildNodes())) {
+        String nodeName = n.getNodeName();
+        Node nodeChild = n.getChildNodes().item(0);
+        if (nodeName.equals("station:nprID")) {
+          sb.withId(NodeUtils.getTextContent(n));
+        } else if (nodeName.equals("station:callLetters")) {
+          callLetters = NodeUtils.getTextContent(n);
+        } else if (nodeName.equals("station:verboseName") &&
+            callLetters == null) {
+          callLetters = NodeUtils.getTextContent(n);
+        } else if (nodeName.equals("station:band") && nodeChild != null) {
+          sb.withBand(NodeUtils.getTextContent(n));
+        } else if (nodeName.equals("station:frequency") && nodeChild != null) {
+          sb.withFrequency(NodeUtils.getTextContent(n));
+        } else if (nodeName.equals("station:city") && nodeChild != null) {
+          sb.withMarketCity(NodeUtils.getTextContent(n));
+        } else if (nodeName.equals("station:tagline") && nodeChild != null) {
+          sb.withTagline(NodeUtils.getTextContent(n));
+        } else if (nodeName.equals("station:stream")) {
+          Attr urlAttr = (Attr) n.getAttributes().getNamedItem("url");
+          Attr encodingAttr = (Attr) n.getAttributes().getNamedItem("encoding");
+          if (encodingAttr != null && urlAttr != null) {
+            String url = urlAttr.getValue();
+            String encoding = encodingAttr.getValue();
+            if (encoding.equals("mp3") && url != null) {
+              streams.add(new AudioStream(url, null));
+            }
+          }
+        }
+      }
+
+      sb.withAudioStreams(streams);
+      sb.withName(callLetters);
+
+      return sb.build();
+    }
+
+
+    private static Station createNprmlStation(Node node) {
       if (!node.getNodeName().equals("station") ||
           !node.hasChildNodes()) {
         return null;
       }
-      StationBuilder sb = new StationBuilder(node.getAttributes().getNamedItem(
-              "id").getNodeValue());
+      StationBuilder sb = new StationBuilder(
+          node.getAttributes().getNamedItem("id").getNodeValue()
+      );
       List<AudioStream> streams = new LinkedList<AudioStream>();
       List<Podcast> podcasts = new LinkedList<Podcast>();
       for (Node n : new IterableNodeList(node.getChildNodes())) {
@@ -285,5 +376,6 @@ public class Station {
       List<Station> result = parseStations(stations);
       return result.size() > 0 ? result.get(0) : null;
     }
+
   }
 }

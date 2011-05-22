@@ -3,85 +3,77 @@
   xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="fill_parent"
   android:layout_height="fill_parent"
-  android:paddingTop="5dip">
+  android:background="@drawable/list_background"
+  android:paddingTop="5dip"
+  android:paddingLeft="5dip"
+  android:paddingRight="5dip">
   <LinearLayout
     android:id="@+id/NewsStoryLayout"
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:orientation="vertical">
-    <LinearLayout
-      android:id="@+id/NewsStoryRow01"
+    <TextView
       android:layout_height="wrap_content"
       android:layout_width="fill_parent"
-      android:layout_marginLeft="3dip"
-      android:layout_marginRight="3dip">
-      <ImageView
-        android:id="@+id/NewsStoryIcon"
-        android:scaleType="fitCenter"
-        android:layout_width="100dip"
-        android:layout_height="100dip"
-        android:layout_gravity="center"
-        android:visibility="gone"
-        android:layout_marginRight="5dip" />
-      <TextView
-        android:layout_height="wrap_content"
-        android:text="TextView01"
-        android:layout_width="fill_parent"
-        android:id="@+id/NewsStoryTitleText"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:layout_gravity="center_vertical"
-        android:layout_marginLeft="5dip"
-        android:typeface="serif" />
-    </LinearLayout>
+      android:id="@+id/NewsStoryIndex"
+      android:gravity="right"
+      android:layout_alignParentRight="true"
+      style="@style/NewsStoryIndex"/>
+    <TextView
+      android:layout_height="wrap_content"
+      android:layout_width="fill_parent"
+      android:id="@+id/NewsStoryTitleText"
+      android:textAppearance="@style/NewsItemTitle"
+      android:layout_gravity="center_vertical"
+    />
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:id="@+id/NewsStoryByline"
+      android:textAppearance="@style/NewsStorySubtext"/>
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:id="@+id/NewsStoryDateline"
+      android:textAppearance="@style/NewsStorySubtext"/>
     <LinearLayout
       android:id="@+id/NewsStoryRow02"
       android:layout_height="wrap_content"
       android:layout_width="fill_parent"
-      android:paddingTop="3dip"
+      android:paddingTop="10dip"
+      android:paddingBottom="10dip"
       android:gravity="center">
+      <Button
+        android:id="@+id/NewsStoryShareButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="6dp"
+        android:layout_weight="1"
+        android:drawableLeft="@drawable/share"
+        android:text="@string/msg_share"
+        android:background="@drawable/story_button_background"/>
       <Button
         android:id="@+id/NewsStoryListenNowButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginRight="6dp"
+        android:layout_weight="1"
+        android:drawableLeft="@drawable/speaker"
         android:text="@string/msg_listen_now"
-        android:layout_marginLeft="5dip"
-        android:layout_marginRight="5dip" />
+        android:background="@drawable/story_button_background"/>
       <Button
         android:id="@+id/NewsStoryListenEnqueueButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:drawableLeft="@drawable/plus"
         android:text="@string/msg_listen_later"
-        android:layout_marginLeft="5dip"
-        android:layout_marginRight="5dip" />
-      <ImageButton
-        android:id="@+id/NewsStoryShareButton"
-        android:layout_width="wrap_content"
-        android:src="@android:drawable/ic_menu_share"
-        android:scaleType="centerInside"
-        android:layout_height="48dip"
-        android:layout_marginLeft="5dip"
-        android:layout_marginRight="5dip" />
-    </LinearLayout>
-    <LinearLayout
-      android:id="@+id/LinearLayout01"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content">
-      <TextView
-        android:text="TextView01"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_toRightOf="@id/NewsStoryListenEnqueueButton"
-        android:layout_marginLeft="5dip"
-        android:id="@+id/NewsStoryDateline" />
+        android:background="@drawable/story_button_background"/>
     </LinearLayout>
     <FrameLayout
       android:layout_width="fill_parent"
-      android:layout_height="wrap_content"
-      android:layout_margin="5dip"
-      android:layout_marginTop="5dip"
-      android:layout_marginLeft="10dip"
-      android:layout_marginRight="10dip">
+      android:layout_height="wrap_content">
       <WebView
         android:id="@+id/NewsStoryWebView"
         android:layout_height="fill_parent"

@@ -6,40 +6,51 @@
   <LinearLayout
     android:layout_height="wrap_content"
     android:layout_width="fill_parent"
-    android:id="@+id/Logo"
-    android:orientation="vertical">
-    <include
-      layout="@layout/logo" />
+    android:id="@+id/LogoBar"
+    android:orientation="horizontal"
+    android:background="@drawable/header"
+    android:gravity="center">
+    <ImageButton
+      android:id="@+id/MainSearchButton"
+      android:layout_height="wrap_content"
+      android:layout_width="wrap_content"
+      android:layout_margin="5dip"
+      android:src="@drawable/search_button"
+      android:background="@android:color/transparent"
+      />
     <LinearLayout
       android:layout_height="wrap_content"
-      android:layout_width="fill_parent"
-      android:background="@drawable/title">
-      <TextView
-        android:id="@+id/LogoNavText"
+      android:layout_width="wrap_content"
+      android:orientation="horizontal"
+      android:background="@android:color/transparent"
+      android:layout_weight="1"
+      android:gravity="center">
+      <ImageView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_width="fill_parent"
-        android:text="Dummy Text"
-        android:ellipsize="end"
-        android:gravity="center_vertical"
-        android:layout_marginLeft="15dip"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="#fff"
-        android:singleLine="false" android:paddingBottom="2dip">
-      </TextView>
+        android:id="@+id/Logo1"
+        android:src="@drawable/npr_logo"
+        />
+      <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/news"
+        android:id="@+id/Logo2"
+        />
     </LinearLayout>
+    <ProgressBar
+      android:id="@+id/WindowProgressIndicator"
+      android:layout_width="20dp"
+      android:layout_height="20dp"
+      android:layout_margin="5dp"
+      android:visibility="invisible"
+      style="@android:style/Widget.ProgressBar.Small"
+      />
   </LinearLayout>
   <FrameLayout
-    android:id="@+id/Content"
+    android:id="@+id/TitleContent"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:layout_below="@+id/Logo"
-    android:layout_marginBottom="37dip">
-  </FrameLayout>
-  <FrameLayout
-    android:id="@+id/MediaPlayer"
-    android:layout_width="fill_parent"
-    android:layout_height="130dip"
-    android:layout_alignParentBottom="true"
-    android:layout_centerHorizontal="true">
+    android:layout_below="@id/LogoBar">
   </FrameLayout>
 </RelativeLayout>

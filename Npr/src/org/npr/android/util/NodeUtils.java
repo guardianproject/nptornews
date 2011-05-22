@@ -14,16 +14,16 @@
 
 package org.npr.android.util;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import android.util.Log;
 
 import org.npr.api.IterableNodeList;
 import org.w3c.dom.Node;
 
-import android.util.Log;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 public class NodeUtils {
-  public static final String LOG_TAG = NodeUtils.class.getName();
+  private static final String LOG_TAG = NodeUtils.class.getName();
   private static boolean getTextContentAvailable = true;
   private static Method getTextContentMethod = null;
  
@@ -48,8 +48,7 @@ public class NodeUtils {
 
     if (getTextContentAvailable) {
       try {
-        String value = (String) getTextContentMethod.invoke(node);
-        return value;
+        return (String) getTextContentMethod.invoke(node);
       } catch (IllegalArgumentException e1) {
         getTextContentAvailable = false;
       } catch (IllegalAccessException e1) {

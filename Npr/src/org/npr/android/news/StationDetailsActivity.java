@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,210 +15,301 @@
 
 package org.npr.android.news;
 
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
+import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+import android.text.Html;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ExpandableListView;
+import android.widget.AbsListView;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
-import android.widget.SimpleExpandableListAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.ExpandableListView.OnChildClickListener;
+import android.widget.Toast;
 
+import org.npr.android.util.DisplayUtils;
+import org.npr.android.util.FavoriteStationsProvider;
 import org.npr.android.util.Tracker;
 import org.npr.android.util.Tracker.StationDetailsMeasurement;
 import org.npr.api.Station;
 import org.npr.api.Station.AudioStream;
-import org.npr.api.Station.Listenable;
 import org.npr.api.Station.Podcast;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 
-public class StationDetailsActivity extends PlayerActivity implements
-    OnChildClickListener {
+public class StationDetailsActivity extends RootActivity implements
+    AdapterView.OnItemClickListener {
+  private static final String LOG_TAG = StationDetailsActivity.class.getName();
+
+  private ArrayAdapter<ListItem> listAdapter;
+
   private String stationId;
   private Station station;
-  private ImageView imageView;
-  private ImageView iconView;
-  private Drawable imageDrawable;
+  private boolean isFavorite;
 
-  private Handler handler = new Handler() {
-    @Override
-    public void handleMessage(Message msg) {
-      switch (msg.what) {
-        case 0:
-          if (imageDrawable != null) {
-            iconView.setVisibility(View.GONE);
-            imageView.setImageDrawable(imageDrawable);
-            imageView.setVisibility(View.VISIBLE);
-          }
-          break;
-      }
+  private class ListItem {
+    private final AudioStream stream;
+    private final Podcast podcast;
+    private final String header;
+
+    private ListItem(AudioStream stream) {
+      this.stream = stream;
+      this.podcast = null;
+      this.header = null;
     }
-  };
+
+    private ListItem(Podcast podcast) {
+      this.stream = null;
+      this.podcast = podcast;
+      this.header = null;
+    }
+
+    private ListItem(String header) {
+      this.stream = null;
+      this.podcast = null;
+      this.header = header;
+    }
+
+    public boolean isStream() {
+      return stream != null;
+    }
+
+    public boolean isPodcast() {
+      return podcast != null;
+    }
+
+    public boolean isHeader() {
+      return header != null;
+    }
+  }
+
+  private class ListItemAdapter extends ArrayAdapter<ListItem> {
+    public ListItemAdapter(Context context, ArrayList<ListItem> listItems) {
+      super(context, R.layout.station_details_item, R.id.station_details_title,
+          listItems);
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+      convertView = super.getView(position, convertView, parent);
+      ListItem listItem = this.getItem(position);
+      if (listItem == null) {
+        return convertView;
+      }
+
+      ImageView favorite = (ImageView) convertView.findViewById(R.id
+          .station_details_favorite);
+      TextView title = (TextView) convertView.findViewById(R.id
+          .station_details_title);
+      TextView subtitle = (TextView) convertView.findViewById(R.id
+          .station_details_subtitle);
+      TextView tagline = (TextView) convertView.findViewById(R.id
+          .station_details_tagline);
+
+      if (position == 0) {
+        convertView.setEnabled(false);
+        convertView.setBackgroundDrawable(getResources().getDrawable(
+            R.drawable.station_name_background));
+        convertView.getLayoutParams().height = AbsListView.LayoutParams
+            .WRAP_CONTENT;
+        convertView.setPadding(10, 8, 10, 8);
+        favorite.setVisibility(View.GONE);
+        title.setText(Html.fromHtml(station.getName()));
+        title.setTextColor(getResources().getColor(R.color.black));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 36);
+        subtitle.setVisibility(View.VISIBLE);
+        subtitle.setText(Html.fromHtml(
+            new StringBuilder()
+                .append(station.getFrequency())
+                .append(" ")
+                .append(station.getBand())
+                .append(", ")
+                .append(station.getMarketCity())
+                .toString()
+        ));
+        subtitle.setTextColor(getResources().getColor(R.color.black));
+        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        tagline.setVisibility(View.VISIBLE);
+        tagline.setText(station.getTagline());
+        tagline.setTextColor(getResources().getColor(R.color.black));
+        tagline.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+      } else if (position == 1) {
+        convertView.setEnabled(true);
+        convertView.setBackgroundDrawable(getResources().getDrawable(
+            R.drawable.station_favorite_background));
+        convertView.getLayoutParams().height = AbsListView.LayoutParams
+            .WRAP_CONTENT;
+        convertView.setPadding(10, 8, 10, 8);
+        favorite.setVisibility(View.VISIBLE);
+        if (isFavorite) {
+          favorite.setImageResource(R.drawable.heart_normal_selected);
+          title.setText(getString(R.string.msg_station_remove_favorite));
+        } else {
+          favorite.setImageResource(R.drawable.heart_normal);
+          title.setText(getString(R.string.msg_station_add_favorite));
+        }
+        title.setTextColor(getResources().getColor(R.color.black));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        subtitle.setVisibility(View.GONE);
+        tagline.setVisibility(View.GONE);
+      } else if (listItem.isHeader()) {
+        convertView.setEnabled(false);
+        convertView.setBackgroundDrawable(getResources().getDrawable(
+            R.drawable.news_list_title_background));
+        convertView.getLayoutParams().height =
+            DisplayUtils.convertToDIP(getContext(), 20);
+        convertView.setPadding(10, 0, 10, 0);
+        favorite.setVisibility(View.GONE);
+        title.setText(listItem.header);
+        title.setTextColor(getResources().getColor(R.color.news_title_text));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        subtitle.setVisibility(View.GONE);
+        tagline.setVisibility(View.GONE);
+      } else {
+        convertView.setEnabled(true);
+        convertView.setBackgroundDrawable(null);
+        convertView.getLayoutParams().height = AbsListView.LayoutParams
+            .WRAP_CONTENT;
+        convertView.setPadding(10, 18, 10, 18);
+        favorite.setVisibility(View.GONE);
+        if (listItem.isStream()) {
+          title.setText(Html.fromHtml(listItem.stream.getTitle()));
+        } else if (listItem.isPodcast()) {
+          title.setText(Html.fromHtml(listItem.podcast.getTitle()));
+        }
+        title.setTextColor(getResources().getColor(R.color.black));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        subtitle.setVisibility(View.GONE);
+        tagline.setVisibility(View.GONE);
+      }
+      return convertView;
+    }
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
-    stationId = getIntent().getStringExtra(Constants.EXTRA_STATION_ID);
+    if (getIntent().hasExtra(Constants.EXTRA_STATION_ID)) {
+      stationId = getIntent().getStringExtra(Constants.EXTRA_STATION_ID);
+    } else if (getIntent().hasExtra(Constants.EXTRA_ACTIVITY_DATA)) {
+      stationId = getIntent().getStringExtra(Constants.EXTRA_ACTIVITY_DATA);
+    }
     station = StationListActivity.getStationFromCache(stationId);
 
+    String selection = FavoriteStationsProvider.Items.STATION_ID + " = ?";
+    String[] selectionArgs = new String[1];
+    selectionArgs[0] = stationId;
+    Cursor c = getContentResolver().query(
+        FavoriteStationsProvider.CONTENT_URI,
+        null, selection, selectionArgs, null);
+
+    isFavorite = c.moveToFirst();
+    c.close();
+
     if (station == null) {
+      // Must call super or throws exception
+      super.onCreate(savedInstanceState);
+      Log.d(LOG_TAG, "Couldn't get station. Notifying user.");
+      Toast.makeText(this, R.string.msg_station_not_found, Toast.LENGTH_SHORT);
+      if (isFavorite) {
+        getContentResolver().delete(
+            FavoriteStationsProvider.CONTENT_URI,
+            selection,
+            selectionArgs
+        );
+      }
       finish();
+      return;
     }
 
     super.onCreate(savedInstanceState);
 
-    ViewGroup container = (ViewGroup) findViewById(R.id.Content);
+    ViewGroup container = (ViewGroup) findViewById(R.id.TitleContent);
     ViewGroup.inflate(this, R.layout.station_details, container);
 
-    TextView miscText = (TextView) findViewById(R.id.StationMiscText);
-    TextView taglineText = (TextView) findViewById(R.id.StationTaglineText);
-    miscText.setText(new StringBuilder().append(station.getFrequency()).append(
-        " ").append(station.getBand()).append(", ").append(
-        station.getMarketCity()));
-    taglineText.setText(station.getTagline());
-
-    iconView = (ImageView) findViewById(R.id.StationDetailsIcon);
-    imageView = (ImageView) findViewById(R.id.StationDetailsImage);
-    final String image = station.getImage();
-    if (image != null) {
-      Thread imageInitThread = new Thread(new Runnable() {
-        public void run() {
-          imageDrawable = DownloadDrawable.createFromUrl(image);
-          handler.sendEmptyMessage(0);
+    ArrayList<ListItem> listItems = new ArrayList<ListItem>();
+    listItems.add(new ListItem(station.getName()));
+    listItems.add(new ListItem("Favorites")); // string is a placeholder
+    if (station.getAudioStreams().size() > 0) {
+      listItems.add(new ListItem(getString(R.string.msg_station_streams) +
+          " (" + station.getAudioStreams().size() + ")"));
+      for (AudioStream stream : station.getAudioStreams()) {
+        if (stream.getTitle() == null) {
+          listItems.add(new ListItem(new AudioStream(
+              stream.getUrl(),
+              String.format(getString(R.string.format_default_station_name),
+                  station.getName()
+                  )
+          )));
+        } else {
+          listItems.add(new ListItem(stream));
         }
-      });
-      imageInitThread.start();
-    }
-    constructList();
-  }
-
-  @SuppressWarnings("unchecked")
-  private void constructList() {
-    int[] topLevel = new int[] { R.string.msg_station_streams,
-        R.string.msg_station_podcasts };
-    List<AudioStream> streams = station.getAudioStreams();
-    List<Podcast> podcasts = station.getPodcasts();
-
-    int groupLayout = android.R.layout.simple_expandable_list_item_1;
-    int childLayout = android.R.layout.simple_expandable_list_item_2;
-
-    String[] groupFrom = new String[]{"title"};
-    int[] groupTo = new int[]{ android.R.id.text1 };
-
-    List<Map<String, String>> groupData =
-        new ArrayList<Map<String, String>>();
-
-    String[] childFrom = new String[]{"title", "num"};
-    int[] childTo = groupTo;
-
-    List<List<Map<String, String>>> childData =
-        new ArrayList<List<Map<String, String>>>();
-    List<Map<String, String>> children = new ArrayList<Map<String, String>>();
-
-    // Streams
-    if (streams.size() > 0) {
-      Map<String, String> group1 = new HashMap<String, String>();
-      group1.put(groupFrom[0], String.format("%s (%d)", getString(topLevel[0]),
-          streams.size()));
-      groupData.add(group1);
-      for (Iterator<AudioStream> it = streams.iterator(); it.hasNext();) {
-        AudioStream stream = it.next();
-        int i = ((ListIterator) it).previousIndex();
-        Map<String, String> curChildMap = new HashMap<String, String>();
-        children.add(curChildMap);
-        curChildMap.put(childFrom[0], stream.getTitle());
-        curChildMap.put(childFrom[1], "" + i);
-      }
-      childData.add(children);
-    }
-
-    // Podcasts
-    if (podcasts.size() > 0) {
-      Map<String, String> group2 = new HashMap<String, String>();
-      group2.put(groupFrom[0], String.format("%s (%d)", getString(topLevel[1]),
-          podcasts.size()));
-      groupData.add(group2);
-
-      children = new ArrayList<Map<String, String>>();
-      for (Iterator<Podcast> it = podcasts.iterator(); it.hasNext(); ) {
-        Podcast podcast = it.next();
-        int i = ((ListIterator) it).previousIndex();
-        Map<String, String> curChildMap =
-            new HashMap<String, String>();
-        children.add(curChildMap);
-        curChildMap.put(childFrom[0], podcast.getTitle());
-        curChildMap.put(childFrom[1], "" + i);
-      }
-      childData.add(children);
-    }
-
-    SimpleExpandableListAdapter listAdapter = new SimpleExpandableListAdapter(
-        this,
-        groupData,
-        groupLayout,
-        groupFrom,
-        groupTo,
-        childData,
-        childLayout,
-        childFrom,
-        childTo);
-    ExpandableListView list =
-        (ExpandableListView) findViewById(R.id.ExpandableListView01);
-    list.setAdapter(listAdapter);
-    list.setOnChildClickListener(this);
-    // Expand first group if present and it has something to show
-    if (listAdapter.getGroupCount() > 0) {
-      if (listAdapter.getChildrenCount(0) > 0) {
-        list.expandGroup(0);
       }
     }
+    if (station.getPodcasts().size() > 0) {
+      listItems.add(new ListItem(getString(R.string.msg_station_podcasts) +
+          " (" + station.getPodcasts().size() + ")"));
+      for (Podcast podcast : station.getPodcasts()) {
+        listItems.add(new ListItem(podcast));
+      }
+    }
+
+    ListView streamList = (ListView) findViewById(R.id.station_details_list);
+    streamList.setOnItemClickListener(this);
+
+    listAdapter = new ListItemAdapter(this, listItems);
+    streamList.setAdapter(listAdapter);
   }
 
   @Override
-  public CharSequence getMainTitle() {
-    return station.getName();
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public boolean onChildClick(ExpandableListView parent, View v,
-      int groupPosition, int childPosition, long id) {
-    Map<String, String> map =
-        (Map<String, String>) parent.getExpandableListAdapter().getChild(
-            groupPosition, childPosition);
-    int num = Integer.parseInt(map.get("num"));
-    Listenable l;
-    Intent i;
-    switch(groupPosition) {
-      case 0:
-        l = station.getAudioStreams().get(num);
-        // TODO: play audio
-        break;
-      case 1:
-        l = station.getPodcasts().get(num);
-        i = new Intent(this, PodcastActivity.class).putExtra(
-                PodcastActivity.EXTRA_PODCAST_TITLE, l.getTitle()).putExtra(
-                PodcastActivity.EXTRA_PODCAST_URL, l.getUrl());
-        startActivity(i);
-        break;
+  public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+    ListItem li = (ListItem) adapterView.getItemAtPosition(i);
+    if (i == 1) {
+      isFavorite = !isFavorite;
+      if (isFavorite) {
+        ContentValues values = new ContentValues();
+        values.put(FavoriteStationsProvider.Items.NAME, station.getName());
+        values.put(FavoriteStationsProvider.Items.MARKET,
+            station.getMarketCity());
+        values.put(FavoriteStationsProvider.Items.FREQUENCY,
+            station.getFrequency());
+        values.put(FavoriteStationsProvider.Items.BAND, station.getBand());
+        values.put(FavoriteStationsProvider.Items.STATION_ID, stationId);
+        getContentResolver().insert(
+            FavoriteStationsProvider.CONTENT_URI,
+            values
+        );
+      } else {
+        String selection = FavoriteStationsProvider.Items.STATION_ID + " = ?";
+        String[] selectionArgs = new String[1];
+        selectionArgs[0] = stationId;
+        getContentResolver().delete(
+            FavoriteStationsProvider.CONTENT_URI,
+            selection,
+            selectionArgs
+        );
+      }
+      listAdapter.notifyDataSetChanged();
+    } else if (li.isStream()) {
+      playSingleNow(Playable.PlayableFactory.fromStationStream(station.getId(),
+          li.stream));
+    } else if (li.isPodcast()) {
+      Intent intent = new Intent(this, PodcastActivity.class).putExtra(
+          PodcastActivity.EXTRA_PODCAST_TITLE, li.podcast.getTitle()).putExtra(
+          PodcastActivity.EXTRA_PODCAST_URL, li.podcast.getUrl());
+      startActivity(intent);
     }
-
-    return true;
   }
 
   @Override
   public void trackNow() {
     StringBuilder pageName = new StringBuilder("Stations").append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append(getMainTitle());
+    pageName.append(station == null ? "" : station.getName());
     Tracker.instance(getApplication()).trackPage(
         new StationDetailsMeasurement(pageName.toString(), "Stations",
             stationId));

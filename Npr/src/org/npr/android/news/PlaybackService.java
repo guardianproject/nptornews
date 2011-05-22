@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,11 +19,8 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ContentUris;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnBufferingUpdateListener;
@@ -30,31 +28,33 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
-import android.net.Uri;
-import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.npr.android.util.M3uParser;
-import org.npr.android.util.PlaylistEntry;
 import org.npr.android.util.PlaylistParser;
-import org.npr.android.util.PlaylistProvider;
+import org.npr.android.util.PlaylistRepository;
 import org.npr.android.util.PlsParser;
-import org.npr.android.util.PlaylistProvider.Items;
+import org.npr.android.util.Tracker;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
 
-public class PlaybackService extends Service implements OnPreparedListener,
+public class PlaybackService extends Service implements
+    OnPreparedListener,
     OnBufferingUpdateListener, OnCompletionListener, OnErrorListener,
     OnInfoListener {
 
@@ -64,21 +64,46 @@ public class PlaybackService extends Service implements OnPreparedListener,
   public static final String SERVICE_CHANGE_NAME = SERVICE_PREFIX + "CHANGE";
   public static final String SERVICE_CLOSE_NAME = SERVICE_PREFIX + "CLOSE";
   public static final String SERVICE_UPDATE_NAME = SERVICE_PREFIX + "UPDATE";
-  
-  public static final String EXTRA_TITLE = "title";
-  public static final String EXTRA_DOWNLOADED = "downloaded";
-  public static final String EXTRA_DURATION = "duration";
-  public static final String EXTRA_POSITION = "position";
+
+  public static final String SERVICE_PLAY_SINGLE = SERVICE_PREFIX +
+      "PLAY_SINGLE";
+  public static final String SERVICE_PLAY_ENTRY = SERVICE_PREFIX + "PLAY_ENTRY";
+  public static final String SERVICE_TOGGLE_PLAY = SERVICE_PREFIX +
+      "TOGGLE_PLAY";
+  public static final String SERVICE_BACK_30 = SERVICE_PREFIX + "BACK_30";
+  public static final String SERVICE_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
+  public static final String SERVICE_PLAY_NEXT = SERVICE_PREFIX + "PLAYNEXT";
+  public static final String SERVICE_PLAY_PREVIOUS = SERVICE_PREFIX +
+      "PLAYPREVIOUS";
+  public static final String SERVICE_STATUS = SERVICE_PREFIX + "STATUS";
+  public static final String SERVICE_CLEAR_PLAYER = SERVICE_PREFIX +
+      "CLEAR_PLAYER";
+
+  public static final String EXTRA_ID = SERVICE_PREFIX + "ID";
+  public static final String EXTRA_TITLE = SERVICE_PREFIX + "TITLE";
+  public static final String EXTRA_DOWNLOADED = SERVICE_PREFIX + "DOWNLOADED";
+  public static final String EXTRA_DURATION = SERVICE_PREFIX + "DURATION";
+  public static final String EXTRA_POSITION = SERVICE_PREFIX + "POSITION";
+  public static final String EXTRA_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
+  public static final String EXTRA_IS_PLAYING = SERVICE_PREFIX + "IS_PLAYING";
 
   private MediaPlayer mediaPlayer;
   private boolean isPrepared = false;
+  private boolean markedRead;
+  // Track whether we ever called start() on the media player so we don't try
+  // to reset or release it. This causes a hang (ANR) on Droid X
+  // http://code.google.com/p/android/issues/detail?id=959
+  private boolean mediaPlayerHasStarted = false;
 
   private StreamProxy proxy;
   private NotificationManager notificationManager;
   private static final int NOTIFICATION_ID = 1;
-  private int bindCount = 0;
-  private PlaylistEntry current = null;
+  private PlaylistRepository playlist;
+  private int startId;
+  private String currentAction;
+  private Playable current = null;
   private List<String> playlistUrls;
+  private int errorCt;
 
   private TelephonyManager telephonyManager;
   private PhoneStateListener listener;
@@ -90,9 +115,27 @@ public class PlaybackService extends Service implements OnPreparedListener,
 
   // Amount of time to rewind playback when resuming after call 
   private final static int RESUME_REWIND_TIME = 3000;
+  private final static int ERROR_RETRY_COUNT = 3;
+
+  private Looper serviceLooper;
+  private ServiceHandler serviceHandler;
+
+  private final class ServiceHandler extends Handler {
+    public ServiceHandler(Looper looper) {
+      super(looper);
+    }
+
+    @Override
+    public void handleMessage(Message msg) {
+      startId = msg.arg1;
+      onHandleIntent((Intent) msg.obj);
+    }
+  }
+
 
   @Override
   public void onCreate() {
+    super.onCreate();
     mediaPlayer = new MediaPlayer();
     mediaPlayer.setOnBufferingUpdateListener(this);
     mediaPlayer.setOnCompletionListener(this);
@@ -101,111 +144,247 @@ public class PlaybackService extends Service implements OnPreparedListener,
     mediaPlayer.setOnPreparedListener(this);
     notificationManager = (NotificationManager) getSystemService(
         Context.NOTIFICATION_SERVICE);
-    Log.w(LOG_TAG, "Playback service created");
+    playlist = new PlaylistRepository(getApplicationContext(),
+        getContentResolver());
+
+    Log.d(LOG_TAG, "Playback service created");
 
     telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
-    // Create a PhoneStateListener to watch for offhook and idle events
+    // Create a PhoneStateListener to watch for off-hook and idle events
     listener = new PhoneStateListener() {
       @Override
       public void onCallStateChanged(int state, String incomingNumber) {
         switch (state) {
-        case TelephonyManager.CALL_STATE_OFFHOOK:
-        case TelephonyManager.CALL_STATE_RINGING:
-          // Phone going offhook or ringing, pause the player.
-          if (isPlaying()) {
-            pause();
-            isPausedInCall = true;
-          }
-          break;
-        case TelephonyManager.CALL_STATE_IDLE:
-          // Phone idle. Rewind a couple of seconds and start playing.
-          if (isPausedInCall) {
-            seekTo(Math.max(0, getPosition() - RESUME_REWIND_TIME));
-            play();
-          }
-          break;
+          case TelephonyManager.CALL_STATE_OFFHOOK:
+          case TelephonyManager.CALL_STATE_RINGING:
+            // Phone going off-hook or ringing, pause the player.
+            if (isPlaying()) {
+              pause();
+              isPausedInCall = true;
+            }
+            break;
+          case TelephonyManager.CALL_STATE_IDLE:
+            // Phone idle. Rewind a couple of seconds and start playing.
+            if (isPausedInCall) {
+              isPausedInCall = false;
+              seekTo(Math.max(0, getPosition() - RESUME_REWIND_TIME));
+              play();
+            }
+            break;
         }
       }
     };
 
     // Register the listener with the telephony manager.
     telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE);
+
+    HandlerThread thread = new HandlerThread("PlaybackService:WorkerThread");
+    thread.start();
+
+    serviceLooper = thread.getLooper();
+    serviceHandler = new ServiceHandler(serviceLooper);
   }
 
   @Override
-  public IBinder onBind(Intent arg0) {
-    bindCount++;
-    Log.d(LOG_TAG, "Bound PlaybackService, count " + bindCount);
-    return new ListenBinder();
+  public void onStart(Intent intent, int startId) {
+    Log.d(LOG_TAG, "OnStart");
+    super.onStart(intent, startId);
+    Message message = serviceHandler.obtainMessage();
+    message.arg1 = startId;
+    message.obj = intent;
+    serviceHandler.sendMessage(message);
+  }
+
+  protected void onHandleIntent(Intent intent) {
+    String action = intent.getAction();
+    if (action.equals(SERVICE_PLAY_SINGLE) || action.equals(SERVICE_PLAY_ENTRY)) {
+      currentAction = action;
+      current = intent.getParcelableExtra(Playable.PLAYABLE_TYPE);
+      playCurrent(0);
+    } else if (action.equals(SERVICE_TOGGLE_PLAY)) {
+      if (isPlaying()) {
+        pause();
+        // Get rid of the toggle intent, since we don't want it redelivered
+        // on restart
+        Intent emptyIntent = new Intent(intent);
+        emptyIntent.setAction("");
+        startService(emptyIntent);
+      } else if (current != null) {
+        if (isPrepared) {
+          play();
+        } else {
+          playCurrent(0);
+        }
+      } else {
+        currentAction = SERVICE_PLAY_ENTRY;
+        errorCt = 0;
+        playFirstUnreadEntry();
+      }
+    } else if (action.equals(SERVICE_BACK_30)) {
+      seekRelative(-30000);
+    } else if (action.equals(SERVICE_SEEK_TO)) {
+      seekTo(intent.getIntExtra(EXTRA_SEEK_TO, 0));
+    } else if (action.equals(SERVICE_PLAY_NEXT)) {
+      playNextEntry();
+    } else if (action.equals(SERVICE_PLAY_PREVIOUS)) {
+      playPreviousEntry();
+    } else if (action.equals(SERVICE_STATUS)) {
+      updateProgress();
+    } else if (action.equals(SERVICE_CLEAR_PLAYER)) {
+      if (!isPlaying()) {
+        stopSelfResult(startId);
+      }
+    }
   }
 
   @Override
-  public boolean onUnbind(Intent arg0) {
-    bindCount--;
-    Log.d(LOG_TAG, "Unbinding PlaybackService, count " + bindCount);
-    if (!isPlaying() && bindCount == 0) {
-      Log.w(LOG_TAG, "Will stop self");
-      stopSelf();
-    } else {
-      Log.d(LOG_TAG, "Will not stop self");
+  public IBinder onBind(Intent intent) {
+    Log.w(LOG_TAG, "onBind called, but binding no longer supported.");
+    return null;
+  }
+
+  private boolean playCurrent(int startingErrorCount) {
+    errorCt = startingErrorCount;
+    while (errorCt < ERROR_RETRY_COUNT) {
+      try {
+        prepareThenPlay(current.getUrl(), current.isStream());
+        return true;
+      } catch (IOException e) {
+        Log.e(LOG_TAG, "IOException on playlist entry " + current.getId(), e);
+        errorCt++;
+        if (errorCt >= ERROR_RETRY_COUNT) {
+          Toast.makeText(getApplicationContext(),
+              getResources().getString(R.string.msg_playback_error),
+              Toast.LENGTH_LONG).show();
+        }
+      }
     }
+
     return false;
   }
 
-  synchronized public boolean isPlaying() {
-    if (isPrepared) {
-      return mediaPlayer.isPlaying();
+  private void playNextEntry() {
+    do {
+      long id = current.getId();
+      if (id != -1) {
+        current = playlist.getNextEntry(current.getId());
+      } else {
+        current = playlist.getFirstUnreadEntry();
+      }
+    } while (current != null && !playCurrent(0));
+  }
+
+  private void playPreviousEntry() {
+    do {
+      current = playlist.getPreviousEntry(current.getId());
+    } while (current != null && !playCurrent(0));
+  }
+
+  private void playFirstUnreadEntry() {
+    do {
+      current = playlist.getFirstUnreadEntry();
+    } while (current != null && !playCurrent(0));
+
+    if (current == null) {
+      stopSelfResult(startId);
     }
-    return false;
   }
 
-  public PlaylistEntry getCurrentEntry() {
-    PlaylistEntry c = current;
-    return c;
+  private void finishEntryAndPlayNext() {
+    if (current.getId() >= 0 && !markedRead) {
+      playlist.markAsRead(current.getId());
+    }
+
+    do {
+      current = playlist.getNextEntry(current.getId());
+    } while (current != null && !playCurrent(0));
+
+    if (current == null) {
+      stopSelfResult(startId);
+    }
   }
 
-  public void setCurrent(PlaylistEntry c) {
-    current = c;
-  }
-
-  synchronized public int getPosition() {
+  synchronized private int getPosition() {
     if (isPrepared) {
       return mediaPlayer.getCurrentPosition();
     }
     return 0;
   }
 
-  synchronized public int getDuration() {
-    if (isPrepared) {
-      return mediaPlayer.getDuration();
-    }
-    return 0;
+  synchronized private boolean isPlaying() {
+    return isPrepared && mediaPlayer.isPlaying();
   }
 
-  synchronized public int getCurrentPosition() {
+  synchronized private void seekRelative(int pos) {
     if (isPrepared) {
-      return mediaPlayer.getCurrentPosition();
+      mediaPlayer.seekTo(mediaPlayer.getCurrentPosition() + pos);
     }
-    return 0;
   }
 
-  synchronized public void seekTo(int pos) {
+  synchronized private void seekTo(int pos) {
     if (isPrepared) {
       mediaPlayer.seekTo(pos);
     }
   }
 
-  synchronized public void play() {
+  private void prepareThenPlay(String url, boolean stream)
+      throws IllegalArgumentException, IllegalStateException, IOException {
+    Log.d(LOG_TAG, "playNew");
+    // First, clean up any existing audio.
+    stop();
+
+    if (isPlaylist(url)) {
+      downloadPlaylist(url);
+      if (playlistUrls.size() > 0) {
+        url = playlistUrls.remove(0);
+      } else {
+        throw new IOException("Empty playlist downloaded");
+      }
+    }
+
+    Log.d(LOG_TAG, "listening to " + url + " stream=" + stream);
+    String playUrl = url;
+    // From 2.2 on (SDK ver 8), the local mediaplayer can handle Shoutcast
+    // streams natively. Let's detect that, and not proxy.
+    int sdkVersion = 0;
+    try {
+      sdkVersion = Integer.parseInt(Build.VERSION.SDK);
+    } catch (NumberFormatException ignored) {
+    }
+
+    if (stream && sdkVersion < 8) {
+      if (proxy == null) {
+        proxy = new StreamProxy();
+        proxy.init();
+        proxy.start();
+      }
+      playUrl = String.format("http://127.0.0.1:%d/%s",
+          proxy.getPort(), url);
+    }
+
+    markedRead = false;
+    synchronized (this) {
+      Log.d(LOG_TAG, "reset: " + playUrl);
+      mediaPlayer.reset();
+      mediaPlayer.setDataSource(playUrl);
+      mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+      Log.d(LOG_TAG, "Preparing: " + playUrl);
+      mediaPlayer.prepareAsync();
+      Log.d(LOG_TAG, "Waiting for prepare");
+    }
+  }
+
+  synchronized private void play() {
     if (!isPrepared || current == null) {
       Log.e(LOG_TAG, "play - not prepared");
       return;
     }
-    Log.d(LOG_TAG, "play " + current.id);
+    Log.d(LOG_TAG, "play " + current.getId());
     mediaPlayer.start();
-    markAsRead(current.id);
+    mediaPlayerHasStarted = true;
 
     int icon = R.drawable.stat_notify_musicplayer;
-    CharSequence contentText = current.title;
+    CharSequence contentText = current.getTitle();
     long when = System.currentTimeMillis();
     Notification notification = new Notification(icon, contentText, when);
     notification.flags = Notification.FLAG_NO_CLEAR
@@ -213,13 +392,14 @@ public class PlaybackService extends Service implements OnPreparedListener,
     Context c = getApplicationContext();
     CharSequence title = getString(R.string.app_name);
     Intent notificationIntent;
-    if (current.storyID != null) {
-      notificationIntent = new Intent(this, NewsStoryActivity.class);
-      notificationIntent.putExtra(Constants.EXTRA_STORY_ID, current.storyID);
+    if (current.getActivityData() != null) {
+      notificationIntent = new Intent(this, current.getActivity());
+      notificationIntent.putExtra(Constants.EXTRA_ACTIVITY_DATA,
+          current.getActivityData());
       notificationIntent.putExtra(Constants.EXTRA_DESCRIPTION,
           R.string.msg_main_subactivity_nowplaying);
     } else {
-      notificationIntent = new Intent(this, Main.class);
+      notificationIntent = new Intent(this, NewsListActivity.class);
     }
     notificationIntent.setAction(Intent.ACTION_VIEW);
     notificationIntent.addCategory(Intent.CATEGORY_DEFAULT);
@@ -235,81 +415,38 @@ public class PlaybackService extends Service implements OnPreparedListener,
       getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
     }
     lastChangeBroadcast = new Intent(SERVICE_CHANGE_NAME);
-    lastChangeBroadcast.putExtra(EXTRA_TITLE, current.title);
+    lastChangeBroadcast.putExtra(EXTRA_TITLE, current.getTitle());
+    lastChangeBroadcast.putExtra(EXTRA_ID, current.getId());
     getApplicationContext().sendStickyBroadcast(lastChangeBroadcast);
+
+    if (current != null && current.getUrl() != null) {
+      Tracker.PlayEvent e = new Tracker.PlayEvent(current.getUrl());
+      Tracker.instance(getApplication()).trackLink(e);
+    }
   }
 
-  synchronized public void pause() {
+  synchronized private void pause() {
     Log.d(LOG_TAG, "pause");
     if (isPrepared) {
       mediaPlayer.pause();
     }
     notificationManager.cancel(NOTIFICATION_ID);
+
+    if (current != null) {
+      Tracker.PauseEvent e = new Tracker.PauseEvent(current.getUrl());
+      Tracker.instance(getApplication()).trackLink(e);
+    }
   }
 
-  synchronized public void stop() {
+  synchronized private void stop() {
     Log.d(LOG_TAG, "stop");
     if (isPrepared) {
+      isPrepared = false;
       if (proxy != null) {
         proxy.stop();
         proxy = null;
       }
       mediaPlayer.stop();
-      isPrepared = false;
-    }
-    cleanup();
-  }
-
-  
-  /**
-   * Start listening to the given URL.
-   */
-  public void listen(String url, boolean stream)
-      throws IllegalArgumentException, IllegalStateException, IOException {
-    // First, clean up any existing audio.
-    if (isPlaying()) {
-      stop();
-    }
-
-    if (isPlaylist(url)) {
-      downloadPlaylist();
-      if (playlistUrls.size() > 0) {
-        url = playlistUrls.remove(0);
-      } else {
-        return;
-      }
-    }
-
-    Log.d(LOG_TAG, "listening to " + url + " stream=" + stream);
-    String playUrl = url;
-    // From 2.2 on (SDK ver 8), the local mediaplayer can handle Shoutcast
-    // streams natively. Let's detect that, and not proxy.
-    Log.d(LOG_TAG, "SDK Version " + Build.VERSION.SDK);
-    int sdkVersion = 0;
-    try {
-      sdkVersion = Integer.parseInt(Build.VERSION.SDK);
-    } catch (NumberFormatException e) {
-    }
-
-    if (stream && sdkVersion < 8) {
-      if (proxy == null) {
-        proxy = new StreamProxy();
-        proxy.init();
-        proxy.start();
-      }
-      String proxyUrl = String.format("http://127.0.0.1:%d/%s",
-          proxy.getPort(), url);
-      playUrl = proxyUrl;
-    }
-
-    synchronized (this) {
-      Log.d(LOG_TAG, "reset: " + playUrl);
-      mediaPlayer.reset();
-      mediaPlayer.setDataSource(playUrl);
-      mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-      Log.d(LOG_TAG, "Preparing: " + playUrl);
-      mediaPlayer.prepareAsync();
-      Log.d(LOG_TAG, "Waiting for prepare");
     }
   }
 
@@ -322,9 +459,6 @@ public class PlaybackService extends Service implements OnPreparedListener,
       }
     }
     play();
-    if (onPreparedListener != null) {
-      onPreparedListener.onPrepared(mp);
-    }
 
     updateProgressThread = new Thread(new Runnable() {
       public void run() {
@@ -353,6 +487,8 @@ public class PlaybackService extends Service implements OnPreparedListener,
     super.onDestroy();
     Log.w(LOG_TAG, "Service exiting");
 
+    stop();
+
     if (updateProgressThread != null) {
       updateProgressThread.interrupt();
       try {
@@ -362,22 +498,24 @@ public class PlaybackService extends Service implements OnPreparedListener,
       }
     }
 
-    stop();
     synchronized (this) {
       if (mediaPlayer != null) {
-        mediaPlayer.release();
+        if (mediaPlayerHasStarted) {
+          mediaPlayer.release();
+        }
         mediaPlayer = null;
       }
     }
 
-    telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE);
-  }
+    serviceLooper.quit();
 
-  public class ListenBinder extends Binder {
-
-    public PlaybackService getService() {
-      return PlaybackService.this;
+    notificationManager.cancel(NOTIFICATION_ID);
+    if (lastChangeBroadcast != null) {
+      getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
     }
+    getApplicationContext().sendBroadcast(new Intent(SERVICE_CLOSE_NAME));
+
+    telephonyManager.listen(listener, PhoneStateListener.LISTEN_NONE);
   }
 
   @Override
@@ -392,24 +530,38 @@ public class PlaybackService extends Service implements OnPreparedListener,
    * Sends an UPDATE broadcast with the latest info.
    */
   private void updateProgress() {
-    if (isPrepared && mediaPlayer != null && mediaPlayer.isPlaying()) {
-      // Update broadcasts are sticky, so when a new receiver connects, it will
-      // have the data without polling.
-      if (lastUpdateBroadcast != null) {
-        getApplicationContext().removeStickyBroadcast(lastUpdateBroadcast);
+    if (lastUpdateBroadcast != null) {
+      getApplicationContext().removeStickyBroadcast(lastUpdateBroadcast);
+    }
+
+    if (mediaPlayer != null && isPrepared) {
+
+      int duration = mediaPlayer.getDuration(),
+          position = mediaPlayer.getCurrentPosition();
+      if (!markedRead) {
+        if (position > duration / 10) {
+          markedRead = true;
+          playlist.markAsRead(current.getId());
+        }
       }
+
+      Intent tempUpdateBroadcast = new Intent(SERVICE_UPDATE_NAME);
+      tempUpdateBroadcast.putExtra(EXTRA_DURATION, duration);
+      tempUpdateBroadcast.putExtra(EXTRA_DOWNLOADED,
+          (int) ((lastBufferPercent / 100.0) * duration));
+      tempUpdateBroadcast.putExtra(EXTRA_POSITION, position);
+      tempUpdateBroadcast.putExtra(EXTRA_IS_PLAYING, mediaPlayer.isPlaying());
+
+      // Update broadcasts while playing are not sticky, due to concurrency
+      // issues.  These fire very often, so this shouldn't be a problem.
+      getApplicationContext().sendBroadcast(tempUpdateBroadcast);
+    } else {
       lastUpdateBroadcast = new Intent(SERVICE_UPDATE_NAME);
-      int position = mediaPlayer.getCurrentPosition();
-      int duration = mediaPlayer.getDuration();
-      lastUpdateBroadcast.putExtra(EXTRA_DURATION, mediaPlayer.getDuration());
-      lastUpdateBroadcast.putExtra(EXTRA_DOWNLOADED,
-          (int) ((lastBufferPercent / 100.0) * mediaPlayer.getDuration()));
-      lastUpdateBroadcast.putExtra(EXTRA_POSITION,
-          mediaPlayer.getCurrentPosition());
+      lastUpdateBroadcast.putExtra(EXTRA_IS_PLAYING, false);
       getApplicationContext().sendStickyBroadcast(lastUpdateBroadcast);
     }
   }
-  
+
   @Override
   public void onCompletion(MediaPlayer mp) {
     Log.w(LOG_TAG, "onComplete()");
@@ -422,30 +574,46 @@ public class PlaybackService extends Service implements OnPreparedListener,
       }
     }
 
-    cleanup();
-    
-    if (onCompletionListener != null) {
-      onCompletionListener.onCompletion(mp);
+    if (current != null) {
+      Tracker.StopEvent e = new Tracker.StopEvent(current.getUrl());
+      Tracker.instance(getApplication()).trackLink(e);
     }
 
+    // Unfinished playlist
     if (playlistUrls != null && playlistUrls.size() > 0) {
-      // Unfinished playlist
-      String url = playlistUrls.remove(0);
-      try {
-        listen(url, current.isStream);
-      } catch (IllegalArgumentException e) {
-        Log.e(LOG_TAG, "", e);
-      } catch (IllegalStateException e) {
-        Log.e(LOG_TAG, "", e);
-      } catch (IOException e) {
-        Log.e(LOG_TAG, "", e);
+      boolean successfulPlay = false;
+      while (!successfulPlay && playlistUrls.size() > 0) {
+        String url = playlistUrls.remove(0);
+        errorCt = 0;
+        while (errorCt < ERROR_RETRY_COUNT) {
+          try {
+            prepareThenPlay(url, current.isStream());
+            successfulPlay = true;
+            break;
+          } catch (IllegalArgumentException e) {
+            Log.e(LOG_TAG, "", e);
+            errorCt++;
+          } catch (IllegalStateException e) {
+            Log.e(LOG_TAG, "", e);
+            errorCt++;
+          } catch (IOException e) {
+            Log.e(LOG_TAG, "", e);
+            errorCt++;
+          }
+        }
+
+        if (errorCt >= ERROR_RETRY_COUNT) {
+          Toast.makeText(getApplicationContext(),
+              getResources().getString(R.string.msg_playback_error),
+              Toast.LENGTH_LONG).show();
+        }
       }
-      return;
     }
 
-    playNext();
-    if (bindCount == 0 && !isPlaying()) {
-      stopSelf();
+    if (currentAction.equals(SERVICE_PLAY_ENTRY)) {
+      finishEntryAndPlayNext();
+    } else {
+      stopSelfResult(startId);
     }
   }
 
@@ -459,7 +627,21 @@ public class PlaybackService extends Service implements OnPreparedListener,
             "MediaPlayer refused to play current item. Bailing on prepare.");
       }
     }
-    return false;
+    isPrepared = false;
+    if (mediaPlayerHasStarted) {
+      mediaPlayer.reset();
+    }
+
+    Log.e(LOG_TAG, "Media player onError, ct:" + errorCt);
+    errorCt++;
+    if (errorCt < ERROR_RETRY_COUNT) {
+      playCurrent(errorCt);
+      // Returning true means we handled the error, false causes the
+      // onCompletion handler to be called
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -468,70 +650,26 @@ public class PlaybackService extends Service implements OnPreparedListener,
     return false;
   }
 
-  private void playNext() {
-    Log.w(LOG_TAG, "Playing next track");
-    if (current != null) {
-      PlaylistEntry entry = getNextPlaylistItem(current.order);
-      if (entry != null) {
-        current = entry;
-        String url = current.url;
-        try {
-          if (url == null || url.equals("")) {
-            Log.d(LOG_TAG, "no url");
-            // Do nothing.
-          } else {
-            listen(url, current.isStream);
-          }
-        } catch (IllegalArgumentException e) {
-          Log.e(LOG_TAG, "", e);
-          e.printStackTrace();
-        } catch (IllegalStateException e) {
-          Log.e(LOG_TAG, "", e);
-        } catch (IOException e) {
-          Log.e(LOG_TAG, "", e);
-        }
-        Log.d(LOG_TAG, "playing commenced");
-      }
-    }
-  }
-
-  /**
-   * Remove all intents and notifications about the last media.
-   */
-  private void cleanup() {
-    notificationManager.cancel(NOTIFICATION_ID);
-    if (lastChangeBroadcast != null) {
-      getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
-    }
-    if (lastUpdateBroadcast != null) {
-      getApplicationContext().removeStickyBroadcast(lastUpdateBroadcast);
-    }
-    getApplicationContext().sendBroadcast(new Intent(SERVICE_CLOSE_NAME));
-  }
-
   private boolean isPlaylist(String url) {
     return url.indexOf("m3u") > -1 || url.indexOf("pls") > -1;
   }
 
-  private void downloadPlaylist() throws MalformedURLException, IOException {
-    String url = current.url;
+  private boolean downloadPlaylist(String url) throws IOException {
     Log.d(LOG_TAG, "downloading " + url);
     URLConnection cn = new URL(url).openConnection();
     cn.connect();
     InputStream stream = cn.getInputStream();
     if (stream == null) {
       Log.e(LOG_TAG, "Unable to create InputStream for url: + url");
+      return false;
     }
 
     File downloadingMediaFile = new File(getCacheDir(), "playlist_data");
     FileOutputStream out = new FileOutputStream(downloadingMediaFile);
     byte buf[] = new byte[16384];
-    int totalBytesRead = 0, incrementalBytesRead = 0;
-    int numread;
-    while ((numread = stream.read(buf)) > 0) {
-      out.write(buf, 0, numread);
-      totalBytesRead += numread;
-      incrementalBytesRead += numread;
+    int bytesRead;
+    while ((bytesRead = stream.read(buf)) > 0) {
+      out.write(buf, 0, bytesRead);
     }
 
     stream.close();
@@ -542,79 +680,10 @@ public class PlaybackService extends Service implements OnPreparedListener,
     } else if (url.indexOf("pls") > -1) {
       parser = new PlsParser(downloadingMediaFile);
     } else {
-      return;
+      return false;
     }
     playlistUrls = parser.getUrls();
+    return true;
   }
 
-  private PlaylistEntry retrievePlaylistItem(int current, boolean next) {
-    String selection = PlaylistProvider.Items.IS_READ + " = ?";
-    String[] selectionArgs = new String[1];
-    selectionArgs[0] = "0";
-    String sort = PlaylistProvider.Items.PLAY_ORDER + (next ? " asc" : " desc");
-    return retrievePlaylistItem(selection, selectionArgs, sort);
-  }
-
-  private PlaylistEntry getNextPlaylistItem(int current) {
-    return retrievePlaylistItem(current, true);
-  }
-
-  private PlaylistEntry retrievePlaylistItem(String selection,
-      String[] selectionArgs, String sort) {
-    Cursor cursor = getContentResolver().query(PlaylistProvider.CONTENT_URI,
-        null, selection, selectionArgs, sort);
-    return getFromCursor(cursor);
-  }
-
-  private PlaylistEntry getFromCursor(Cursor c) {
-    String title = null, url = null, storyID = null;
-    long id;
-    int order;
-    if (c.moveToFirst()) {
-      id = c.getInt(c.getColumnIndex(PlaylistProvider.Items._ID));
-      title = c.getString(c.getColumnIndex(PlaylistProvider.Items.NAME));
-      url = c.getString(c.getColumnIndex(PlaylistProvider.Items.URL));
-      order = c.getInt(c.getColumnIndex(PlaylistProvider.Items.PLAY_ORDER));
-      storyID = c.getString(c.getColumnIndex(PlaylistProvider.Items.STORY_ID));
-      c.close();
-      return new PlaylistEntry(id, url, title, false, order, storyID);
-    }
-    c.close();
-    return null;
-  }
-
-  private void markAsRead(long id) {
-    Uri update = ContentUris.withAppendedId(PlaylistProvider.CONTENT_URI, id);
-    ContentValues values = new ContentValues();
-    values.put(Items.IS_READ, true);
-    @SuppressWarnings("unused")
-    int result = getContentResolver().update(update, values, null, null);
-  }
-
-  // -----------
-  // Some stuff added for inspection when testing
-
-  private OnCompletionListener onCompletionListener;
-
-  /**
-   * Allows a class to be notified when the currently playing track is
-   * completed. Mostly used for testing the service
-   * 
-   * @param listener
-   */
-  public void setOnCompletionListener(OnCompletionListener listener) {
-    onCompletionListener = listener;
-  }
-
-  private OnPreparedListener onPreparedListener;
-
-  /**
-   * Allows a class to be notified when the currently selected track has been
-   * prepared to start playing. Mostly used for testing.
-   * 
-   * @param listener
-   */
-  public void setOnPreparedListener(OnPreparedListener listener) {
-    onPreparedListener = listener;
-  }
 }

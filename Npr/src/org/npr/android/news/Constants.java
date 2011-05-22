@@ -1,4 +1,5 @@
 // Copyright 2009 Google Inc.
+// Copyright 2011 NPR
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +22,18 @@ public class Constants {
   public static final String EXTRA_TOPIC_ID = "topic_id";
   public static final String EXTRA_QUERY_TERM = "query_term";
   public static final String EXTRA_QUERY_URL = "query_url";
+  public static final String EXTRA_ACTIVITY_DATA = "activity_data";
 
-  public static final String EXTRA_SHOW_REFRESH = "show_refresh";
   public static final String EXTRA_DESCRIPTION = "extra_description";
   public static final String EXTRA_GROUPING = "extra_grouping";
   public static final String EXTRA_SIZE = "extra_size";
+  public static final String EXTRA_LIVE_STREAM_RSS_URL =
+    "guide.publicbroadcasting.net query url";
+  public static final String EXTRA_STORY_ID_LIST = "list_of_story_ids";
+  public static final String EXTRA_STATION_LIST_MODE =
+      "mode_for_station_list_activity";
+  public static final String EXTRA_ON_AIR = "program_is_on_air";
+  public static final String EXTRA_PODCAST_URL = "podcast_rss_feed_url";
 
   private Constants() {
     // no instantiation

@@ -3,29 +3,101 @@
   <style
     name="MyTheme"
     parent="android:Theme.Light.NoTitleBar">
-    <item
-      name="android:windowBackground">@color/light_grey</item>
-    <item
-      name="android:colorBackground">@color/light_grey</item>
-    <item
-      name="android:panelColorBackground">@color/light_grey</item>
-    <item
-      name="android:listViewStyle">@style/MyListView</item>
+    <item name="android:windowBackground">@color/light_grey</item>
+    <item name="android:colorBackground">@color/light_grey</item>
+    <item name="android:panelColorBackground">@color/light_grey</item>
+    <item name="android:listViewStyle">@style/MyListView</item>
+    <item name="android:textAppearanceLarge">
+      ?android:attr/textAppearanceMedium
+    </item>
   </style>
-  <style
-    name="MyListView"
-    parent="android:Widget.ListView.White">
-    <item
-      name="android:background">@color/light_grey</item>
+
+  <style name="MyListView" parent="android:Widget.ListView.White">
+    <!--<item name="android:cacheColorHint">#fff2f2f2</item>-->
+    <item name="android:background">#fff2f2f2</item>
+    <item name="android:divider">@drawable/divider</item>
+    <item name="android:dividerHeight">2dp</item>
+    <item name="android:listPreferredItemHeight">15dp</item>
+    <item name="android:listSelector">@drawable/list_selector_background</item>
   </style>
-  <style
-    name="MyDefaultTextAppearance"
+
+  <style name="ViewTitle">
+    <item name="android:background">@drawable/title_background</item>
+    <item name="android:gravity">center_vertical</item>
+    <item name="android:layout_height">34dip</item>
+    <item name="android:layout_width">fill_parent</item>
+    <item name="android:paddingLeft">5dip</item>
+    <item name="android:paddingRight">5dip</item>
+  </style>
+  <style name="ViewTitleText" parent="@android:style/TextAppearance">
+    <item name="android:textSize">14dip</item>
+    <item name="android:textColor">#333</item>
+    <item name="android:textStyle">bold</item>
+    <item name="android:ellipsize">end</item>
+    <item name="android:singleLine">true</item>
+  </style>
+  <style name="NewsItemTitle" parent="@android:style/TextAppearance">
+    <item name="android:textSize">15dip</item>
+    <item name="android:typeface">serif</item>
+    <item name="android:textStyle">bold</item>
+    <item name="android:textColor">@android:color/black</item>
+  </style>
+  <style name="NewsItemTeaserText"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">12dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">#737373</item>
+  </style>
+  <style name="PlayerStatusText"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">10dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">#f5f5f5</item>
+  </style>
+  <style name="PlayerText"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">12dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">#f5f5f5</item>
+  </style>
+  <style name="PlaylistItemTitle"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">12dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textStyle">bold</item>
+    <item name="android:textColor">#333</item>
+  </style>
+  <style name="PlaylistItemDuration"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">10dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">#333</item>
+  </style>
+  <style name="actionButton">
+    <item name="android:gravity">center</item>
+    <item name="android:textColor">@color/action_button_text_color</item>
+    <item name="android:textSize">11sp</item>
+    <item name="android:textStyle">bold</item>
+    <item name="android:background">@drawable/action_button_background</item>
+    <item name="android:layout_marginLeft">5dip</item>
+    <item name="android:layout_marginRight">5dip</item>
+  </style>
+  <style name="NewsStorySubtext"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">10dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">#737373</item>
+  </style>
+  <style name="StationFrequencyText"
+         parent="@android:style/TextAppearance">
+    <item name="android:textSize">20sp</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">@color/light_blue</item>
+  </style>
+  <style name="NewsStoryIndex"
     parent="@android:style/TextAppearance">
-    <item
-      name="android:textSize">14dip</item>
-    <item
-      name="android:textColor">#333</item>
-    <item
-      name="android:textStyle">bold</item>
+    <item name="android:textSize">12dip</item>
+    <item name="android:typeface">sans</item>
+    <item name="android:textColor">#737373</item>
   </style>
 </resources>

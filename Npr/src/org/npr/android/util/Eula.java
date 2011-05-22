@@ -65,7 +65,9 @@ public class Eula {
           refuse(activity);
         }
       });
-      builder.setMessage(FileUtils.readFile(activity, R.raw.eula));
+      builder.setMessage(
+          FileUtils.readFile(activity.getResources(), R.raw.eula)
+      );
       builder.create().show();
     }
   }

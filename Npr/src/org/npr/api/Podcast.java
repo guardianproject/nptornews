@@ -22,11 +22,10 @@ import org.w3c.dom.Attr;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 public class Podcast {
   private final String title;
@@ -44,13 +43,16 @@ public class Podcast {
   public static class Item {
     private final String title;
     private final String pubDate;
+    private final String duration;
     private final String guid;
     private final String url;
-    public Item(String title, String pubDate, String guid, String url) {
+    public Item(String title, String pubDate, String guid, String url,
+                String duration) {
       this.title = title;
       this.pubDate = pubDate;
       this.guid = guid;
       this.url = url;
+      this.duration = duration;
     }
 
     public String getTitle() {
@@ -64,6 +66,9 @@ public class Podcast {
     }
     public String getUrl() {
       return url;
+    }
+    public String getDuration() {
+      return duration;
     }
 
     @Override
@@ -92,7 +97,7 @@ public class Podcast {
     private String title;
     private String summary;
     private String link;
-    private List<Item> items = new LinkedList<Item>();
+    private final List<Item> items = new LinkedList<Item>();
 
     public PodcastBuilder withTitle(String title) {
       this.title = title;
@@ -164,7 +169,8 @@ public class Podcast {
           !node.hasChildNodes()) {
         return null;
       }
-      String title = null, guid = null, url = null, pubDate = null;
+      String title = null, guid = null, url = null, pubDate = null,
+          duration = null;
       for (Node n : new IterableNodeList(node.getChildNodes())) {
         String nodeName = n.getNodeName();
         Node nodeChild = n.getChildNodes().item(0);
@@ -179,6 +185,11 @@ public class Podcast {
           if (urlAttr != null) {
             url = urlAttr.getNodeValue();
           }
+        } else if (nodeName.equals("itunes:duration")) {
+          String[] dur = NodeUtils.getTextContent(n).split(":");
+          if (dur.length == 2) {
+            duration = dur[0] + " min " + dur[1] + " sec";
+          }
         }
         if (title != null && pubDate != null && guid != null && url != null) {
           // There may be multiple enclosures. Use the first one.
@@ -186,7 +197,7 @@ public class Podcast {
           break;
         }
       }
-      return new Item(title, pubDate, guid, url);
+      return new Item(title, pubDate, guid, url, duration);
     }
 
     public static Podcast downloadPodcast(String url) {
@@ -210,8 +221,7 @@ public class Podcast {
       }
       Log.d(LOG_TAG, "node " + podcasts.getNodeName() + " "
           + podcasts.getChildNodes().getLength());
-      Podcast result = parsePodcast(podcasts);
-      return result;
+      return parsePodcast(podcasts);
     }
   }
 }
