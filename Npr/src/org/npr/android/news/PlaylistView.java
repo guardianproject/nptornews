@@ -33,6 +33,8 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -102,6 +104,15 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private int startY;
   private boolean cancelDown;
 
+  private RelativeLayout adWindow;
+
+  private enum adWindowStates {
+    WindowNeedsMeasurement, WindowTooNarrow, WindowReadyToBeShown,
+    WindowVisible, WindowHasBeenShown
+  }
+
+  private adWindowStates adWindowState = adWindowStates.WindowTooNarrow;
+
   private enum ClickedItem {
     rewind, rewind30, playPause, fastForward, contractedPlay, progressbar
   }
@@ -113,6 +124,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private BroadcastReceiver closeReceiver;
   private BroadcastReceiver playlistChangedReceiver;
 
+  private static final int MSG_AD_CLOSE = 0;
   private GestureDetector gestureDetector;
   private final Handler handler = new Handler() {
     @Override
@@ -137,13 +149,21 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
             }
 
             @Override
-            public void onAnimationStart(Animation animation) {}
+            public void onAnimationStart(Animation animation) {
+            }
 
             @Override
-            public void onAnimationRepeat(Animation animation) {}
+            public void onAnimationRepeat(Animation animation) {
+            }
           });
 
           listItem.startAnimation(fling);
+          break;
+
+        case MSG_AD_CLOSE:
+          if (adWindowState == adWindowStates.WindowVisible) {
+            hideAdWindow();
+          }
           break;
       }
     }
@@ -172,6 +192,9 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     drawer.setOnDrawerCloseListener(this);
     touchSlop = ViewConfiguration.getTouchSlop();
     handle = (RelativeLayout) findViewById(R.id.handle);
+
+    adWindow = (RelativeLayout) findViewById(R.id.adWindow);
+    adWindow.setVisibility(View.INVISIBLE);
 
     playerContracted = (RelativeLayout) findViewById(R.id.player_contracted);
     playerExpanded = (RelativeLayout) findViewById(R.id.player_expanded);
@@ -215,6 +238,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     if (intent != null) {
       changeReceiver.onReceive(context, intent);
     } else {
+      Log.d(LOG_TAG, "Call clearPlayer from init");
       clearPlayer();
     }
 
@@ -254,6 +278,40 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     }
 
     refreshList();
+  }
+
+  @Override
+  protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+
+    if (adWindowState == adWindowStates.WindowNeedsMeasurement) {
+      if (adWindow.getMeasuredWidth() >= 240) {
+        adWindowState = adWindowStates.WindowReadyToBeShown;
+        WebView adView = (WebView) findViewById(R.id.adView);
+        adView.setBackgroundColor(0);
+
+        WebSettings webSettings = adView.getSettings();
+        webSettings.setSavePassword(false);
+        webSettings.setSaveFormData(false);
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setSupportZoom(false);
+
+        adView.loadDataWithBaseURL(null,
+            "<html><head><style type='text/css'>body {padding:0;margin:0} " +
+                "p {padding:0 0 3px 0;margin:0;color:white;" +
+                "font-size:10px;font-family:Helvetica,Arial," +
+                "sans-serif;text-align:center}</style>" +
+                "</head><body><script type='text/javascript' " +
+                "src='http://ad.doubleclick.net/adj/" +
+                "n6735.NPR.MOBILE/android;sz=320x50' />" +
+                "</body></html>",
+            "text/html", "utf-8", null);
+        ImageButton dismissAdView = (ImageButton) findViewById(R.id.dismissAdView);
+        dismissAdView.setOnClickListener(this);
+      } else {
+        adWindowState = adWindowStates.WindowTooNarrow;
+      }
+    }
   }
 
   private void refreshList() {
@@ -306,6 +364,10 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
         refreshList();
         configurePlayerControls();
         break;
+
+      case R.id.dismissAdView:
+        hideAdWindow();
+        break;
     }
   }
 
@@ -321,6 +383,9 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   }
 
   private void playNow(final Playable playable, String action) {
+    if (adWindowState == adWindowStates.WindowReadyToBeShown) {
+      showAdWindow();
+    }
     startPlaylistSpinners();
     Intent intent = new Intent(context, PlaybackService.class);
     intent.setAction(action);
@@ -408,8 +473,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     @Override
     public void onReceive(Context context, Intent intent) {
       int duration = intent.getIntExtra(PlaybackService.EXTRA_DURATION, 1);
+      Log.d(LOG_TAG, "Playback update; duration = " + duration + " millsecs");
+      // Drop out if no duration is given (flicker?)
+      if (duration == 1) {
+        return;
+      }
+
       int position = intent.getIntExtra(PlaybackService.EXTRA_POSITION, 0);
       int downloaded = intent.getIntExtra(PlaybackService.EXTRA_DOWNLOADED, 1);
+      Log.d(LOG_TAG, "Playback update; position = " + position + " millsecs; " +
+          "downloaded = " + duration + " millsecs");
       boolean isPlaying = intent.getBooleanExtra(PlaybackService
           .EXTRA_IS_PLAYING, false);
       if (!changingProgress) {
@@ -463,6 +536,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private class PlaybackCloseReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+      Log.d(LOG_TAG, "Playback close received - calling clear player");
       clearPlayer();
       refreshList();
     }
@@ -963,5 +1037,68 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
   public String getActiveId() {
     return playlistAdapter.getActiveId();
+  }
+
+  private void showAdWindow() {
+    if (adWindowState != adWindowStates.WindowReadyToBeShown) {
+      return;
+    }
+
+    Animation scroll_in_from_bottom = AnimationUtils.loadAnimation(
+        context,
+        R.anim.scroll_in_from_bottom
+    );
+    scroll_in_from_bottom.setFillAfter(true);
+    scroll_in_from_bottom.setAnimationListener(new Animation.AnimationListener() {
+
+      @Override
+      public void onAnimationStart(Animation animation) {
+      }
+
+      @Override
+      public void onAnimationEnd(Animation animation) {
+        handler.sendEmptyMessageDelayed(MSG_AD_CLOSE, 10000);
+      }
+
+      @Override
+      public void onAnimationRepeat(Animation animation) {
+
+      }
+
+    });
+    adWindow.startAnimation(scroll_in_from_bottom);
+    adWindowState = adWindowStates.WindowVisible;
+  }
+
+  private void hideAdWindow() {
+    if (adWindowState != adWindowStates.WindowVisible) {
+      return;
+    }
+
+    adWindowState = adWindowStates.WindowReadyToBeShown;
+
+    Animation scroll_out_bottom = AnimationUtils.loadAnimation(
+        context,
+        R.anim.scroll_out_bottom
+    );
+    scroll_out_bottom.setFillAfter(true);
+    scroll_out_bottom.setAnimationListener(new Animation.AnimationListener() {
+
+      @Override
+      public void onAnimationStart(Animation animation) {
+      }
+
+      @Override
+      public void onAnimationEnd(Animation animation) {
+      }
+
+      @Override
+      public void onAnimationRepeat(Animation animation) {
+
+      }
+
+    });
+    adWindow.startAnimation(scroll_out_bottom);
+    adWindow.setVisibility(View.INVISIBLE);
   }
 }

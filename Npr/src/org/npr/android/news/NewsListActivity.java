@@ -24,11 +24,14 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageView;
@@ -179,6 +182,30 @@ public class NewsListActivity extends TitleActivity implements
 
 
     listView = (ListView) findViewById(R.id.ListView01);
+
+
+    View header = LayoutInflater.from(this)
+        .inflate(R.layout.list_header, listView, false);
+
+    WebView adWindowHeader = (WebView)header.findViewById(R.id.adWindowHeader);
+
+    WebSettings webSettings = adWindowHeader.getSettings();
+    webSettings.setSavePassword(false);
+    webSettings.setSaveFormData(false);
+    webSettings.setJavaScriptEnabled(true);
+    webSettings.setSupportZoom(false);
+
+    adWindowHeader.loadUrl("www.fark.com");
+    adWindowHeader.loadDataWithBaseURL(null,
+            "<html><head><style type='text/css'>body {padding:0;margin:0} " +
+                "p {display:none}</style>" +
+                "</head><body><script type='text/javascript' " +
+                "src='http://ad.doubleclick.net/adj/" +
+                "n6735.NPR.MOBILE/android;sz=320x50' />" +
+                "</body></html>",
+            "text/html", "utf-8", null);
+    listView.addHeaderView(header);
+
     listView.setOnItemClickListener(this);
     listAdapter = new NewsListAdapter(this);
     listView.setAdapter(listAdapter);

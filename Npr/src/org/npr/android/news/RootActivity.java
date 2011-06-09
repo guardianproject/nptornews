@@ -18,8 +18,11 @@ package org.npr.android.news;
 import android.app.Activity;
 import android.app.ActivityGroup;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
@@ -56,6 +59,7 @@ public abstract class RootActivity extends ActivityGroup implements
   private NavigationView navigationView;
   private PlaylistView playlistView;
   private ProgressBar progressIndicator;
+  private BroadcastReceiver updateReceiver;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -191,7 +195,29 @@ public abstract class RootActivity extends ActivityGroup implements
    * @param playable A Playable stream or podcast to play.
    */
   protected void playSingleNow(Playable playable) {
+    startIndeterminateProgressIndicator();
+
+    if (updateReceiver != null) {
+      unregisterReceiver(updateReceiver);
+      updateReceiver = null;
+    }
+    updateReceiver = new PlaybackUpdateReceiver();
+    registerReceiver(updateReceiver,
+        new IntentFilter(PlaybackService.SERVICE_UPDATE_NAME));
+
     playlistView.playSingleNow(playable);
+  }
+
+  private class PlaybackUpdateReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      int duration = intent.getIntExtra(PlaybackService.EXTRA_DURATION, 1);
+      if (duration != 1) {
+        stopIndeterminateProgressIndicator();
+        unregisterReceiver(updateReceiver);
+        updateReceiver = null;
+      }
+    }
   }
 
   @Override

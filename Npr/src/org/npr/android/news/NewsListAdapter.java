@@ -116,7 +116,6 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     Story story = getItem(position);
 
     ImageView icon = (ImageView) convertView.findViewById(R.id.NewsItemIcon);
-    TextView teaser = (TextView) convertView.findViewById(R.id.NewsItemTeaserText);
     TextView name = (TextView) convertView.findViewById(R.id.NewsItemNameText);
     final ImageView image = (ImageView) convertView.findViewById(R.id.NewsItemImage);
 
@@ -145,16 +144,6 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       // view and will be in italics
       name.setTypeface(name.getTypeface(), Typeface.BOLD);
 
-      String teaserText = story.getMiniTeaser();
-      if (teaserText == null) {
-        teaserText = story.getTeaser();
-      }
-      if (teaserText != null && teaserText.length() > 0) {
-        teaser.setText(Html.fromHtml(teaserText));
-        teaser.setVisibility(View.VISIBLE);
-      } else {
-        teaser.setVisibility(View.GONE);
-      }
       if (story.getImages().size() > 0) {
         final String url = story.getImages().get(0).getSrc();
         Drawable cachedImage = null;
@@ -190,7 +179,6 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     } else {
       // null marker means it's the end of the list.
       icon.setVisibility(View.INVISIBLE);
-      teaser.setVisibility(View.INVISIBLE);
       image.setVisibility(View.GONE);
       name.setTypeface(name.getTypeface(), Typeface.ITALIC);
       name.setText(R.string.msg_load_more);
