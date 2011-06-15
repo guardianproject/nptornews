@@ -104,14 +104,14 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private int startY;
   private boolean cancelDown;
 
-  private RelativeLayout adWindow;
+  private RelativeLayout sponsorshipWindow;
 
-  private enum adWindowStates {
+  private enum sponsorshipWindowStates {
     WindowNeedsMeasurement, WindowTooNarrow, WindowReadyToBeShown,
     WindowVisible, WindowHasBeenShown
   }
 
-  private adWindowStates adWindowState = adWindowStates.WindowTooNarrow;
+  private sponsorshipWindowStates sponsorshipWindowState = sponsorshipWindowStates.WindowTooNarrow;
 
   private enum ClickedItem {
     rewind, rewind30, playPause, fastForward, contractedPlay, progressbar
@@ -161,8 +161,8 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
           break;
 
         case MSG_AD_CLOSE:
-          if (adWindowState == adWindowStates.WindowVisible) {
-            hideAdWindow();
+          if (sponsorshipWindowState == sponsorshipWindowStates.WindowVisible) {
+            hideSponsorshipWindow();
           }
           break;
       }
@@ -193,8 +193,8 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     touchSlop = ViewConfiguration.getTouchSlop();
     handle = (RelativeLayout) findViewById(R.id.handle);
 
-    adWindow = (RelativeLayout) findViewById(R.id.adWindow);
-    adWindow.setVisibility(View.INVISIBLE);
+    sponsorshipWindow = (RelativeLayout) findViewById(R.id.sponsorshipWindow);
+    sponsorshipWindow.setVisibility(View.INVISIBLE);
 
     playerContracted = (RelativeLayout) findViewById(R.id.player_contracted);
     playerExpanded = (RelativeLayout) findViewById(R.id.player_expanded);
@@ -284,19 +284,19 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-    if (adWindowState == adWindowStates.WindowNeedsMeasurement) {
-      if (adWindow.getMeasuredWidth() >= 240) {
-        adWindowState = adWindowStates.WindowReadyToBeShown;
-        WebView adView = (WebView) findViewById(R.id.adView);
-        adView.setBackgroundColor(0);
+    if (sponsorshipWindowState == sponsorshipWindowStates.WindowNeedsMeasurement) {
+      if (sponsorshipWindow.getMeasuredWidth() >= 240) {
+        sponsorshipWindowState = sponsorshipWindowStates.WindowReadyToBeShown;
+        WebView sponsorshipView = (WebView) findViewById(R.id.sponsorshipView);
+        sponsorshipView.setBackgroundColor(0);
 
-        WebSettings webSettings = adView.getSettings();
+        WebSettings webSettings = sponsorshipView.getSettings();
         webSettings.setSavePassword(false);
         webSettings.setSaveFormData(false);
         webSettings.setJavaScriptEnabled(true);
         webSettings.setSupportZoom(false);
 
-        adView.loadDataWithBaseURL(null,
+        sponsorshipView.loadDataWithBaseURL(null,
             "<html><head><style type='text/css'>body {padding:0;margin:0} " +
                 "p {padding:0 0 3px 0;margin:0;color:white;" +
                 "font-size:10px;font-family:Helvetica,Arial," +
@@ -306,10 +306,11 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
                 "n6735.NPR.MOBILE/android;sz=320x50' />" +
                 "</body></html>",
             "text/html", "utf-8", null);
-        ImageButton dismissAdView = (ImageButton) findViewById(R.id.dismissAdView);
-        dismissAdView.setOnClickListener(this);
+        ImageButton dismissSponsorshipView =
+            (ImageButton) findViewById(R.id.dismissSponsorshipView);
+        dismissSponsorshipView.setOnClickListener(this);
       } else {
-        adWindowState = adWindowStates.WindowTooNarrow;
+        sponsorshipWindowState = sponsorshipWindowStates.WindowTooNarrow;
       }
     }
   }
@@ -365,8 +366,8 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
         configurePlayerControls();
         break;
 
-      case R.id.dismissAdView:
-        hideAdWindow();
+      case R.id.dismissSponsorshipView:
+        hideSponsorshipWindow();
         break;
     }
   }
@@ -383,8 +384,8 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   }
 
   private void playNow(final Playable playable, String action) {
-    if (adWindowState == adWindowStates.WindowReadyToBeShown) {
-      showAdWindow();
+    if (sponsorshipWindowState == sponsorshipWindowStates.WindowReadyToBeShown) {
+      showSponsorshipWindow();
     }
     startPlaylistSpinners();
     Intent intent = new Intent(context, PlaybackService.class);
@@ -1039,8 +1040,8 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     return playlistAdapter.getActiveId();
   }
 
-  private void showAdWindow() {
-    if (adWindowState != adWindowStates.WindowReadyToBeShown) {
+  private void showSponsorshipWindow() {
+    if (sponsorshipWindowState != sponsorshipWindowStates.WindowReadyToBeShown) {
       return;
     }
 
@@ -1066,16 +1067,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
       }
 
     });
-    adWindow.startAnimation(scroll_in_from_bottom);
-    adWindowState = adWindowStates.WindowVisible;
+    sponsorshipWindow.startAnimation(scroll_in_from_bottom);
+    sponsorshipWindowState = sponsorshipWindowStates.WindowVisible;
   }
 
-  private void hideAdWindow() {
-    if (adWindowState != adWindowStates.WindowVisible) {
+  private void hideSponsorshipWindow() {
+    if (sponsorshipWindowState != sponsorshipWindowStates.WindowVisible) {
       return;
     }
 
-    adWindowState = adWindowStates.WindowReadyToBeShown;
+    sponsorshipWindowState = sponsorshipWindowStates.WindowReadyToBeShown;
 
     Animation scroll_out_bottom = AnimationUtils.loadAnimation(
         context,
@@ -1098,7 +1099,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
       }
 
     });
-    adWindow.startAnimation(scroll_out_bottom);
-    adWindow.setVisibility(View.INVISIBLE);
+    sponsorshipWindow.startAnimation(scroll_out_bottom);
+    sponsorshipWindow.setVisibility(View.INVISIBLE);
   }
 }

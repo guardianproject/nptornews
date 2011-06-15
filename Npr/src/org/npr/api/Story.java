@@ -284,6 +284,10 @@ public class Story extends ApiElement {
     public boolean isPrimary() {
       return isPrimary;
     }
+
+    public String getTitle() {
+      return title;
+    }
   }
 
   public Story(String id, String link, String shortLink, String title,

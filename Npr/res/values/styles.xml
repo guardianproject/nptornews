@@ -30,46 +30,45 @@
     <item name="android:paddingRight">5dip</item>
   </style>
   <style name="ViewTitleText" parent="@android:style/TextAppearance">
-    <item name="android:textSize">14dip</item>
+    <item name="android:textSize">14sp</item>
     <item name="android:textColor">#333</item>
     <item name="android:textStyle">bold</item>
     <item name="android:ellipsize">end</item>
     <item name="android:singleLine">true</item>
   </style>
   <style name="NewsItemTitle" parent="@android:style/TextAppearance">
-    <item name="android:textSize">15dip</item>
+    <item name="android:textSize">15sp</item>
     <item name="android:typeface">serif</item>
     <item name="android:textStyle">bold</item>
     <item name="android:textColor">@android:color/black</item>
   </style>
-  <style name="NewsItemTeaserText"
-         parent="@android:style/TextAppearance">
-    <item name="android:textSize">12dip</item>
+  <style name="NewsItemSubtitleText" parent="@android:style/TextAppearance">
+    <item name="android:textSize">12sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#737373</item>
   </style>
   <style name="PlayerStatusText"
          parent="@android:style/TextAppearance">
-    <item name="android:textSize">10dip</item>
+    <item name="android:textSize">10sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#f5f5f5</item>
   </style>
   <style name="PlayerText"
          parent="@android:style/TextAppearance">
-    <item name="android:textSize">12dip</item>
+    <item name="android:textSize">12sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#f5f5f5</item>
   </style>
   <style name="PlaylistItemTitle"
          parent="@android:style/TextAppearance">
-    <item name="android:textSize">12dip</item>
+    <item name="android:textSize">12sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textStyle">bold</item>
     <item name="android:textColor">#333</item>
   </style>
   <style name="PlaylistItemDuration"
          parent="@android:style/TextAppearance">
-    <item name="android:textSize">10dip</item>
+    <item name="android:textSize">10sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#333</item>
   </style>
@@ -84,7 +83,7 @@
   </style>
   <style name="NewsStorySubtext"
          parent="@android:style/TextAppearance">
-    <item name="android:textSize">10dip</item>
+    <item name="android:textSize">10sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#737373</item>
   </style>
@@ -96,7 +95,7 @@
   </style>
   <style name="NewsStoryIndex"
     parent="@android:style/TextAppearance">
-    <item name="android:textSize">12dip</item>
+    <item name="android:textSize">12sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#737373</item>
   </style>

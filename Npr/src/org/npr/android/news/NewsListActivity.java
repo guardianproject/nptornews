@@ -78,8 +78,13 @@ public class NewsListActivity extends TitleActivity implements
     public void handleMessage(Message msg) {
       switch (msg.what) {
         case ListItemGestureListener.MSG_LONG_PRESS:
+        {
           lastLongPressPosition = msg.arg1;
-          Story longPressStory = listAdapter.getItem(msg.arg1);
+
+          // Offset 1 for header
+          int storyPosition = msg.arg1 - 1;
+
+          Story longPressStory = listAdapter.getItem(storyPosition);
           if (longPressStory != null && longPressStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
@@ -91,7 +96,7 @@ public class NewsListActivity extends TitleActivity implements
             if (playlistEntry == null) {
               addAndPulseIcon(listView.getChildAt(msg.arg1 -
                   listView.getFirstVisiblePosition()));
-              addStory(msg.arg1, true);
+              addStory(storyPosition, true);
             } else {
               PlaylistEntry activeEntry =
                   playlistRepository.getPlaylistItemFromId(getActiveId());
@@ -102,9 +107,15 @@ public class NewsListActivity extends TitleActivity implements
               playEntryNow(playlistEntry);
             }
           }
-          break;
+        }
+        break;
+
         case ListItemGestureListener.MSG_FLING:
-          flungStory = listAdapter.getItem(msg.arg1);
+        {
+          // Offset 1 for header
+          int storyPosition = msg.arg1 - 1;
+
+          flungStory = listAdapter.getItem(storyPosition);
           if ( flungStory != null && flungStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
@@ -119,7 +130,7 @@ public class NewsListActivity extends TitleActivity implements
                   msg.arg2,
                   true
               );
-              addStory(msg.arg1, false);
+              addStory(storyPosition, false);
             } else {
               animateListItemFling(
                   listView.getChildAt(msg.arg1 -
@@ -129,7 +140,8 @@ public class NewsListActivity extends TitleActivity implements
               );
             }
           }
-          break;
+        }
+        break;
       }
     }
   };
@@ -180,36 +192,33 @@ public class NewsListActivity extends TitleActivity implements
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news, container);
 
-
     listView = (ListView) findViewById(R.id.ListView01);
-
 
     View header = LayoutInflater.from(this)
         .inflate(R.layout.list_header, listView, false);
 
-    WebView adWindowHeader = (WebView)header.findViewById(R.id.adWindowHeader);
+    WebView sponsorshipWindow =
+        (WebView)header.findViewById(R.id.sponsorshipWindowHeader);
 
-    WebSettings webSettings = adWindowHeader.getSettings();
+    WebSettings webSettings = sponsorshipWindow.getSettings();
     webSettings.setSavePassword(false);
     webSettings.setSaveFormData(false);
     webSettings.setJavaScriptEnabled(true);
     webSettings.setSupportZoom(false);
 
-    adWindowHeader.loadUrl("www.fark.com");
-    adWindowHeader.loadDataWithBaseURL(null,
-            "<html><head><style type='text/css'>body {padding:0;margin:0} " +
-                "p {display:none}</style>" +
-                "</head><body><script type='text/javascript' " +
-                "src='http://ad.doubleclick.net/adj/" +
-                "n6735.NPR.MOBILE/android;sz=320x50' />" +
-                "</body></html>",
-            "text/html", "utf-8", null);
+    sponsorshipWindow.loadDataWithBaseURL(null,
+        "<html><head><style type='text/css'>body {padding:0;margin:0} " +
+            "p {display:none}</style>" +
+            "</head><body><script type='text/javascript' " +
+            "src='http://ad.doubleclick.net/adj/" +
+            "n6735.NPR.MOBILE/android;sz=320x50' />" +
+            "</body></html>",
+        "text/html", "utf-8", null);
     listView.addHeaderView(header);
 
     listView.setOnItemClickListener(this);
     listAdapter = new NewsListAdapter(this);
     listView.setAdapter(listAdapter);
-
 
     // Gesture detection
     gestureDetector = new GestureDetector(
@@ -430,6 +439,7 @@ public class NewsListActivity extends TitleActivity implements
    * @return A URL for the NPR API.
    */
   protected String getApiUrl() {
+    Log.e(LOG_TAG, getIntent().getStringExtra(Constants.EXTRA_QUERY_URL));
     return getIntent().getStringExtra(Constants.EXTRA_QUERY_URL);
   }
 

@@ -41,6 +41,10 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
+import java.sql.Time;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 
@@ -50,11 +54,19 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   private final ImageThreadLoader imageLoader;
   private RootActivity rootActivity = null;
   private final PlaylistRepository repository;
+  private String grouping = null;
+    // Sample date from api: Tue, 09 Jun 2009 15:20:00 -0400
+  public static final SimpleDateFormat apiDateFormat
+      = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
+  private final DateFormat longDateFormat
+      = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT);
 
   public NewsListAdapter(Context context) {
     super(context, R.layout.news_item);
     if (context instanceof RootActivity) {
       rootActivity = (RootActivity) context;
+      grouping =
+          rootActivity.getIntent().getStringExtra(Constants.EXTRA_GROUPING);
     }
     inflater = LayoutInflater.from(getContext());
     imageLoader = ImageThreadLoader.getOnDiskInstance(context);
@@ -116,6 +128,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     Story story = getItem(position);
 
     ImageView icon = (ImageView) convertView.findViewById(R.id.NewsItemIcon);
+    TextView subtitle = (TextView)convertView.findViewById(R.id.NewsItemSubtitleText);
     TextView name = (TextView) convertView.findViewById(R.id.NewsItemNameText);
     final ImageView image = (ImageView) convertView.findViewById(R.id.NewsItemImage);
 
@@ -143,6 +156,23 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       // while scrolling, some items will replace the old "Load more stories"
       // view and will be in italics
       name.setTypeface(name.getTypeface(), Typeface.BOLD);
+
+      if (grouping == null) {
+        for (Story.Parent storyParent : story.getParentTopics()) {
+          if (storyParent.isPrimary()) {
+            subtitle.setText(storyParent.getTitle());
+          }
+        }
+      } else {
+        try {
+          subtitle.setText(
+              longDateFormat.format(apiDateFormat.parse(story.getStoryDate()))
+              );
+        } catch (ParseException e) {
+          Log.e(LOG_TAG, "date format:", e);
+          subtitle.setVisibility(View.GONE);
+        }
+      }
 
       if (story.getImages().size() > 0) {
         final String url = story.getImages().get(0).getSrc();
@@ -179,6 +209,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     } else {
       // null marker means it's the end of the list.
       icon.setVisibility(View.INVISIBLE);
+      subtitle.setVisibility(View.GONE);
       image.setVisibility(View.GONE);
       name.setTypeface(name.getTypeface(), Typeface.ITALIC);
       name.setText(R.string.msg_load_more);
