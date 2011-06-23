@@ -701,6 +701,8 @@ public class Story extends ApiElement {
             sb.withTeaser(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("miniTeaser")) {
             sb.withMiniTeaser(NodeUtils.getTextContent(n));
+          } else if (nodeName.equals("slug")) {
+            sb.withSlug(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("storyDate")) {
             sb.withStoryDate(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("pubDate")) {

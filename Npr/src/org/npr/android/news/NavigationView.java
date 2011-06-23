@@ -127,7 +127,7 @@ public class NavigationView extends FrameLayout implements
         .putExtra(Constants.EXTRA_QUERY_URL, newsUrl)
         .putExtra(Constants.EXTRA_DESCRIPTION, description)
         .putExtra(Constants.EXTRA_GROUPING, grouping)
-        .putExtra(Constants.EXTRA_SIZE, 5)),
+        .putExtra(Constants.EXTRA_SIZE, 10)),
       new SubActivity(new Intent(getContext(), NewsTopicActivity.class)
         .putExtra(Constants.EXTRA_SUBACTIVITY_ID,
           R.string.msg_main_subactivity_topics)),

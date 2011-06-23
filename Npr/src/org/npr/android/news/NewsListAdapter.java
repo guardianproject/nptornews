@@ -41,10 +41,6 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
-import java.sql.Time;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.List;
 
 
@@ -54,19 +50,11 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   private final ImageThreadLoader imageLoader;
   private RootActivity rootActivity = null;
   private final PlaylistRepository repository;
-  private String grouping = null;
-    // Sample date from api: Tue, 09 Jun 2009 15:20:00 -0400
-  public static final SimpleDateFormat apiDateFormat
-      = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
-  private final DateFormat longDateFormat
-      = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT);
 
   public NewsListAdapter(Context context) {
     super(context, R.layout.news_item);
     if (context instanceof RootActivity) {
       rootActivity = (RootActivity) context;
-      grouping =
-          rootActivity.getIntent().getStringExtra(Constants.EXTRA_GROUPING);
     }
     inflater = LayoutInflater.from(getContext());
     imageLoader = ImageThreadLoader.getOnDiskInstance(context);
@@ -128,7 +116,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     Story story = getItem(position);
 
     ImageView icon = (ImageView) convertView.findViewById(R.id.NewsItemIcon);
-    TextView subtitle = (TextView)convertView.findViewById(R.id.NewsItemSubtitleText);
+    TextView topic = (TextView) convertView.findViewById(R.id.NewsItemTopicText);
     TextView name = (TextView) convertView.findViewById(R.id.NewsItemNameText);
     final ImageView image = (ImageView) convertView.findViewById(R.id.NewsItemImage);
 
@@ -157,22 +145,8 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       // view and will be in italics
       name.setTypeface(name.getTypeface(), Typeface.BOLD);
 
-      if (grouping == null) {
-        for (Story.Parent storyParent : story.getParentTopics()) {
-          if (storyParent.isPrimary()) {
-            subtitle.setText(storyParent.getTitle());
-          }
-        }
-      } else {
-        try {
-          subtitle.setText(
-              longDateFormat.format(apiDateFormat.parse(story.getStoryDate()))
-              );
-        } catch (ParseException e) {
-          Log.e(LOG_TAG, "date format:", e);
-          subtitle.setVisibility(View.GONE);
-        }
-      }
+      topic.setText(story.getSlug());
+      topic.setVisibility(View.VISIBLE);
 
       if (story.getImages().size() > 0) {
         final String url = story.getImages().get(0).getSrc();
@@ -181,18 +155,20 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
             url,
             new ImageThreadLoader.ImageLoadedListener() {
               public void imageLoaded(Drawable imageBitmap) {
-                View itemView = parent.getChildAt(position -
+                // Offset 1 for header
+                int storyPosition = position - 1;
+                View itemView = parent.getChildAt(storyPosition -
                     ((ListView) parent).getFirstVisiblePosition());
                 if (itemView == null) {
                   Log.w(LOG_TAG, "Could not find list item at position " +
-                      position);
+                      storyPosition);
                   return;
                 }
                 ImageView img = (ImageView)
                     itemView.findViewById(R.id.NewsItemImage);
                 if (img == null) {
                   Log.w(LOG_TAG, "Could not find image for list item at " +
-                      "position " + position);
+                      "position " + storyPosition);
                   return;
                 }
                 img.setImageDrawable(imageBitmap);
@@ -209,7 +185,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     } else {
       // null marker means it's the end of the list.
       icon.setVisibility(View.INVISIBLE);
-      subtitle.setVisibility(View.GONE);
+      topic.setVisibility(View.GONE);
       image.setVisibility(View.GONE);
       name.setTypeface(name.getTypeface(), Typeface.ITALIC);
       name.setText(R.string.msg_load_more);

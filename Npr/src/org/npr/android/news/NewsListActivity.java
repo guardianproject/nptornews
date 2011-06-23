@@ -439,7 +439,6 @@ public class NewsListActivity extends TitleActivity implements
    * @return A URL for the NPR API.
    */
   protected String getApiUrl() {
-    Log.e(LOG_TAG, getIntent().getStringExtra(Constants.EXTRA_QUERY_URL));
     return getIntent().getStringExtra(Constants.EXTRA_QUERY_URL);
   }
 
@@ -502,7 +501,7 @@ public class NewsListActivity extends TitleActivity implements
         .putExtra(Constants.EXTRA_QUERY_URL, url)
         .putExtra(Constants.EXTRA_DESCRIPTION, "Top Stories")
         .putExtra(Constants.EXTRA_GROUPING, grouping)
-        .putExtra(Constants.EXTRA_SIZE, 5);
+        .putExtra(Constants.EXTRA_SIZE, 10);
     setIntent(i);
   }
 
