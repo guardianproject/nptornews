@@ -31,10 +31,14 @@
   </style>
   <style name="ViewTitleText" parent="@android:style/TextAppearance">
     <item name="android:textSize">14sp</item>
-    <item name="android:textColor">#333</item>
+    <item name="android:textColor">#ffffffff</item>
     <item name="android:textStyle">bold</item>
     <item name="android:ellipsize">end</item>
     <item name="android:singleLine">true</item>
+  </style>
+  <style name="ViewTitleSubText" parent="@style/ViewTitleText">
+    <item name="android:textSize">10sp</item>
+    <item name="android:textStyle">normal</item>
   </style>
   <style name="NewsItemTitle" parent="@android:style/TextAppearance">
     <item name="android:textSize">13sp</item>
@@ -43,7 +47,7 @@
     <item name="android:textColor">@android:color/black</item>
   </style>
   <style name="NewsItemTopicText" parent="@android:style/TextAppearance">
-    <item name="android:textSize">10sp</item>
+    <item name="android:textSize">10.5sp</item>
     <item name="android:typeface">sans</item>
     <item name="android:textColor">#737373</item>
   </style>

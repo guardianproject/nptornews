@@ -25,12 +25,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-
+import android.widget.*;
 import org.npr.android.util.PlaylistRepository;
 import org.npr.api.Client;
 import org.npr.api.Story;
@@ -50,6 +45,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   private final ImageThreadLoader imageLoader;
   private RootActivity rootActivity = null;
   private final PlaylistRepository repository;
+  private long lastUpdate = -1;
 
   public NewsListAdapter(Context context) {
     super(context, R.layout.news_item);
@@ -70,6 +66,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     public void handleMessage(Message msg) {
       if (msg.what >= 0) {
         if (moreStories != null) {
+          lastUpdate = System.currentTimeMillis();
           remove(null);
           for (Story s : moreStories) {
             if (getPosition(s) < 0) {
@@ -257,5 +254,15 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       result = result.substring(0, result.length() - 1);
     }
     return result;
+  }
+
+  /**
+   * Returns the time (in milliseconds since the epoch) of when
+   * the last update was.
+   *
+   * @return A time unit in milliseconds since the epoch
+   */
+  public long getLastUpdate() {
+    return lastUpdate;
   }
 }

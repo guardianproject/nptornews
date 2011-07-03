@@ -23,11 +23,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.GestureDetector;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.webkit.WebSettings;
@@ -37,11 +33,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-
-import org.npr.android.util.DisplayUtils;
-import org.npr.android.util.PlaylistEntry;
-import org.npr.android.util.PlaylistRepository;
-import org.npr.android.util.Tracker;
+import org.npr.android.util.*;
 import org.npr.android.util.Tracker.StoryListMeasurement;
 import org.npr.api.ApiConstants;
 import org.npr.api.Story;
@@ -72,13 +64,13 @@ public class NewsListActivity extends TitleActivity implements
 
   private BroadcastReceiver playlistChangedReceiver;
 
+
   // Message handler to communicate between the gestures and the activity
   private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
       switch (msg.what) {
-        case ListItemGestureListener.MSG_LONG_PRESS:
-        {
+        case ListItemGestureListener.MSG_LONG_PRESS: {
           lastLongPressPosition = msg.arg1;
 
           // Offset 1 for header
@@ -110,13 +102,12 @@ public class NewsListActivity extends TitleActivity implements
         }
         break;
 
-        case ListItemGestureListener.MSG_FLING:
-        {
+        case ListItemGestureListener.MSG_FLING: {
           // Offset 1 for header
           int storyPosition = msg.arg1 - 1;
 
           flungStory = listAdapter.getItem(storyPosition);
-          if ( flungStory != null && flungStory.getPlayable() != null) {
+          if (flungStory != null && flungStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
                     getContentResolver());
@@ -171,7 +162,7 @@ public class NewsListActivity extends TitleActivity implements
   protected void onCreate(Bundle savedInstanceState) {
     if (getIntent() == null ||
         !(getIntent().hasExtra(Constants.EXTRA_QUERY_URL)
-        || getIntent().hasExtra(Constants.EXTRA_PODCAST_URL))) {
+            || getIntent().hasExtra(Constants.EXTRA_PODCAST_URL))) {
       setDefaultIntent();
     }
     grouping = getIntent().getStringExtra(Constants.EXTRA_GROUPING);
@@ -198,7 +189,7 @@ public class NewsListActivity extends TitleActivity implements
         .inflate(R.layout.list_header, listView, false);
 
     WebView sponsorshipWindow =
-        (WebView)header.findViewById(R.id.sponsorshipWindowHeader);
+        (WebView) header.findViewById(R.id.sponsorshipWindowHeader);
 
     WebSettings webSettings = sponsorshipWindow.getSettings();
     webSettings.setSavePassword(false);
@@ -206,14 +197,19 @@ public class NewsListActivity extends TitleActivity implements
     webSettings.setJavaScriptEnabled(true);
     webSettings.setSupportZoom(false);
 
-    sponsorshipWindow.loadDataWithBaseURL(null,
-        "<html><head><style type='text/css'>body {padding:0;margin:0} " +
-            "p {display:none}</style>" +
-            "</head><body><script type='text/javascript' " +
-            "src='http://ad.doubleclick.net/adj/" +
-            "n6735.NPR.MOBILE/android;sz=320x50' />" +
+    long ord = (long) (Math.random() * 10000000000000000L);
+    String html = String.format(
+        "<html><head><style type=\"text/css\">body {padding:0;margin:0;text-align:center;}" +
+            "p {margin:0;padding:0;font-family:sans-serif;" +
+            "font-size:x-small}</style></head>" +
+            "<body><script type=\"text/javascript\" " +
+            "src=\"http://ad.doubleclick.net/adj/n6735.NPR.MOBILE/android;sz=320x50;ord=%1$d?\">" +
+            "</script>" +
             "</body></html>",
-        "text/html", "utf-8", null);
+        ord);
+    Log.d(LOG_TAG, html);
+    sponsorshipWindow.loadDataWithBaseURL(null, html, "text/html", "utf-8",
+        null);
     listView.addHeaderView(header);
 
     listView.setOnItemClickListener(this);
@@ -238,12 +234,20 @@ public class NewsListActivity extends TitleActivity implements
     addStories();
   }
 
+
+  @Override
+  protected void onStart() {
+    super.onStart();
+    handler.postDelayed(updateTime, UPDATE_SHORT_PERIOD);
+  }
+
   @Override
   protected void onStop() {
     if (playlistChangedReceiver != null) {
       unregisterReceiver(playlistChangedReceiver);
       playlistChangedReceiver = null;
     }
+    handler.removeCallbacks(updateTime);
     super.onStop();
   }
 
@@ -274,7 +278,7 @@ public class NewsListActivity extends TitleActivity implements
   private void addStories() {
     String url = getApiUrl();
     if (url != null) {
-    // Adding these parameters to podcast urls (like WNYC) can break them
+      // Adding these parameters to podcast urls (like WNYC) can break them
       Map<String, String> params = new HashMap<String, String>();
       params.put("startNum", "" + listAdapter.getCount());
       params.put("numResults", "" + initialSize);
@@ -446,7 +450,7 @@ public class NewsListActivity extends TitleActivity implements
    * Gets a podcast RSS feed used for looking up the items for the list. This
    * will only be queried if getApiUrl returns null. No additional parameters
    * are added to the podcast list and all stories are shown immediately.
-   *
+   * <p/>
    * The default implementation pulls the URL from the Intent's
    * EXTRA_PODCAST_URL value.
    *
@@ -460,6 +464,7 @@ public class NewsListActivity extends TitleActivity implements
   public CharSequence getMainTitle() {
     return description;
   }
+
 
   @Override
   public void trackNow() {
@@ -504,6 +509,35 @@ public class NewsListActivity extends TitleActivity implements
         .putExtra(Constants.EXTRA_SIZE, 10);
     setIntent(i);
   }
+
+  // Update every five seconds until we have a result
+  private static final long UPDATE_SHORT_PERIOD = 5000L;
+
+  // Update once a minute once we have a result
+  private static final long UPDATE_LONG_PERIOD = 60000L;
+
+  private Runnable updateTime = new Runnable() {
+    public void run() {
+      if (listAdapter == null) {
+        handler.postDelayed(this, UPDATE_SHORT_PERIOD);
+        return;
+      }
+      long lastUpdate = listAdapter.getLastUpdate();
+      if (lastUpdate < 0) {
+        handler.postDelayed(this, UPDATE_SHORT_PERIOD);
+        return;
+      }
+      String label =
+          String.format("Updated %1$s ago",
+              TimeUtils.formatMillis(
+                  System.currentTimeMillis() - lastUpdate,
+                  TimeUnit.DAYS,
+                  TimeUnit.MINUTES
+              ));
+      setTitleRight(label);
+      handler.postDelayed(this, UPDATE_LONG_PERIOD);
+    }
+  };
 
   private class PlaylistChangedReceiver extends BroadcastReceiver {
     @Override
