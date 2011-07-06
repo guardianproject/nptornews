@@ -199,9 +199,8 @@ public class NewsListActivity extends TitleActivity implements
 
     long ord = (long) (Math.random() * 10000000000000000L);
     String html = String.format(
-        "<html><head><style type=\"text/css\">body {padding:0;margin:0;text-align:center;}" +
-            "p {margin:0;padding:0;font-family:sans-serif;" +
-            "font-size:x-small}</style></head>" +
+        "<html><head><style type=\"text/css\">body {padding:0;margin:0;text-align:center;background-color:black;}" +
+            "p {margin:0;padding:0;font-family:sans-serif;font-size:x-small;color:white;}</style></head>" +
             "<body><script type=\"text/javascript\" " +
             "src=\"http://ad.doubleclick.net/adj/n6735.NPR.MOBILE/android;sz=320x50;ord=%1$d?\">" +
             "</script>" +
