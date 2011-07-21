@@ -31,7 +31,7 @@
   </style>
   <style name="ViewTitleText" parent="@android:style/TextAppearance">
     <item name="android:textSize">14sp</item>
-    <item name="android:textColor">#ffffffff</item>
+    <item name="android:textColor">#ff000000</item>
     <item name="android:textStyle">bold</item>
     <item name="android:ellipsize">end</item>
     <item name="android:singleLine">true</item>

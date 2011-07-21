@@ -147,30 +147,9 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
 
       if (story.getImages().size() > 0) {
         final String url = story.getImages().get(0).getSrc();
-        Drawable cachedImage = null;
-        cachedImage = imageLoader.loadImage(
+        Drawable cachedImage = imageLoader.loadImage(
             url,
-            new ImageThreadLoader.ImageLoadedListener() {
-              public void imageLoaded(Drawable imageBitmap) {
-                // Offset 1 for header
-                int storyPosition = position - 1;
-                View itemView = parent.getChildAt(storyPosition -
-                    ((ListView) parent).getFirstVisiblePosition());
-                if (itemView == null) {
-                  Log.w(LOG_TAG, "Could not find list item at position " +
-                      storyPosition);
-                  return;
-                }
-                ImageView img = (ImageView)
-                    itemView.findViewById(R.id.NewsItemImage);
-                if (img == null) {
-                  Log.w(LOG_TAG, "Could not find image for list item at " +
-                      "position " + storyPosition);
-                  return;
-                }
-                img.setImageDrawable(imageBitmap);
-              }
-            }
+            new ImageLoadListener(position, (ListView) parent)
         );
 
         image.setImageDrawable(cachedImage);
@@ -264,5 +243,37 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
    */
   public long getLastUpdate() {
     return lastUpdate;
+  }
+
+  private class ImageLoadListener implements ImageThreadLoader.ImageLoadedListener {
+
+    private int position;
+    private ListView parent;
+
+    public ImageLoadListener(int position, ListView parent) {
+      this.position = position;
+      this.parent = parent;
+    }
+
+    public void imageLoaded(Drawable imageBitmap) {
+      // Offset 1 for header
+      int storyPosition = position + 1;
+      View itemView = parent.getChildAt(storyPosition -
+          parent.getFirstVisiblePosition());
+      if (itemView == null) {
+        Log.w(LOG_TAG, "Could not find list item at position " +
+            storyPosition);
+        return;
+      }
+      ImageView img = (ImageView)
+          itemView.findViewById(R.id.NewsItemImage);
+      if (img == null) {
+        Log.w(LOG_TAG, "Could not find image for list item at " +
+            "position " + storyPosition);
+        return;
+      }
+      Log.d(LOG_TAG, "Drawing image at position " + storyPosition);
+      img.setImageDrawable(imageBitmap);
+    }
   }
 }

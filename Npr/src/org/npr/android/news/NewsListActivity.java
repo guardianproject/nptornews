@@ -179,6 +179,8 @@ public class NewsListActivity extends TitleActivity implements
     titleBar.getLayoutParams().height = DisplayUtils.convertToDIP(this, 20);
     TextView titleText = (TextView) findViewById(R.id.TitleText);
     titleText.setTextColor(getResources().getColor(R.color.news_title_text));
+    TextView titleRight = (TextView) findViewById(R.id.TitleRight);
+    titleRight.setTextColor(getResources().getColor(R.color.news_title_text));
 
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news, container);
@@ -202,7 +204,7 @@ public class NewsListActivity extends TitleActivity implements
         "<html><head><style type=\"text/css\">body {padding:0;margin:0;text-align:center;background-color:black;}" +
             "p {margin:0;padding:0;font-family:sans-serif;font-size:x-small;color:white;}</style></head>" +
             "<body><script type=\"text/javascript\" " +
-            "src=\"http://ad.doubleclick.net/adj/n6735.NPR.MOBILE/android;sz=320x50;ord=%1$d?\">" +
+            "src=\"http://ad.doubleclick.net/adj/n6735.NPR.MOBILE/android_npr;sz=320x50;ord=%1$d?\">" +
             "</script>" +
             "</body></html>",
         ord);

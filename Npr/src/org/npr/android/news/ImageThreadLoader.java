@@ -133,6 +133,7 @@ public class ImageThreadLoader {
           @Override
           public void run() {
             if (item.listener != null) {
+              Log.d(LOG_TAG, "Loaded image from " + item.url);
               item.listener.imageLoaded(new BitmapDrawable(bmp));
             }
           }
@@ -153,6 +154,7 @@ public class ImageThreadLoader {
             // re-run the network load or something.
             Bitmap ref = cache.get(item.url);
             if (ref != null) {
+              Log.d(LOG_TAG, "Loaded image from cache");
               item.listener.imageLoaded(new BitmapDrawable(ref));
             } else {
               Log.w(LOG_TAG, "Image loader lost the image to GC.");
@@ -177,6 +179,7 @@ public class ImageThreadLoader {
     if (cache.containsKey(uri)) {
       Bitmap ref = cache.get(uri);
       if (ref != null) {
+        Log.d(LOG_TAG, "Found image in cache!");
         return new BitmapDrawable(ref);
       }
     }
@@ -187,7 +190,6 @@ public class ImageThreadLoader {
     queue.add(item);
 
     // start the thread if needed
-    // NB: this might not work right; it's untested
     if (thread.getState() == State.NEW) {
       thread.start();
     } else if (thread.getState() == State.TERMINATED) {
