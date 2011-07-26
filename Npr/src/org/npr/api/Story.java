@@ -70,6 +70,10 @@ public class Story extends ApiElement {
     public Thumbnail(String medium) {
       this.medium = medium;
     }
+
+    public String getMedium() {
+      return medium;
+    }
   }
 
   public static class Toenail {

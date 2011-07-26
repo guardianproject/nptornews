@@ -145,10 +145,15 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       topic.setText(story.getSlug());
       topic.setVisibility(View.VISIBLE);
 
-      if (story.getImages().size() > 0) {
-        final String url = story.getImages().get(0).getSrc();
+      String imageUrl = null;
+      if (story.getThumbnails().size() > 0) {
+        imageUrl = story.getThumbnails().get(0).getMedium();
+      } else if (story.getImages().size() > 0) {
+        imageUrl = story.getImages().get(0).getSrc();
+      }
+      if (imageUrl != null) {
         Drawable cachedImage = imageLoader.loadImage(
-            url,
+            imageUrl,
             new ImageLoadListener(position, (ListView) parent)
         );
 
