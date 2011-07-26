@@ -214,8 +214,10 @@ public abstract class RootActivity extends ActivityGroup implements
       int duration = intent.getIntExtra(PlaybackService.EXTRA_DURATION, 1);
       if (duration != 1) {
         stopIndeterminateProgressIndicator();
-        unregisterReceiver(updateReceiver);
-        updateReceiver = null;
+        if (updateReceiver != null) {
+          unregisterReceiver(updateReceiver);
+          updateReceiver = null;
+        }
       }
     }
   }
