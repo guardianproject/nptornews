@@ -47,10 +47,19 @@
       style="@android:style/Widget.ProgressBar.Small"
       />
   </LinearLayout>
+
+  <FrameLayout
+    android:id="@+id/SponsorshipBanner"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_alignParentBottom="true"/>
+
   <FrameLayout
     android:id="@+id/TitleContent"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:layout_below="@id/LogoBar">
+    android:layout_height="wrap_content"
+    android:layout_below="@id/LogoBar"
+    android:layout_above="@id/SponsorshipBanner">
   </FrameLayout>
+
 </RelativeLayout>

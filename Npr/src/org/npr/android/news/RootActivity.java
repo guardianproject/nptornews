@@ -71,8 +71,9 @@ public abstract class RootActivity extends ActivityGroup implements
     // when a stream is not playing.
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
+    ViewGroup titleFrame = (ViewGroup) findViewById(R.id.TitleContent);
     navigationView = new NavigationView(this);
-    ((ViewGroup) findViewById(R.id.TitleContent)).addView(navigationView,
+    titleFrame.addView(navigationView,
         new ViewGroup.LayoutParams(LayoutParams.FILL_PARENT,
             LayoutParams.FILL_PARENT));
     navigationView.setVisibility(View.GONE);
@@ -82,15 +83,20 @@ public abstract class RootActivity extends ActivityGroup implements
     mainSearchButton.setOnClickListener(this);
 
     playlistView = new PlaylistView(this);
-    ((ViewGroup) findViewById(R.id.TitleContent)).addView(playlistView,
+    titleFrame.addView(playlistView,
         new ViewGroup.LayoutParams(LayoutParams.FILL_PARENT,
             LayoutParams.FILL_PARENT));
+
     progressIndicator =
         (ProgressBar) findViewById(R.id.WindowProgressIndicator);
 
     trackNow();
   }
 
+
+  protected PlaylistView getPlaylistView() {
+    return playlistView;
+  }
 
   protected void startIndeterminateProgressIndicator() {
     progressIndicator.setVisibility(View.VISIBLE);

@@ -24,31 +24,16 @@ import android.database.Cursor;
 import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Message;
+import android.util.AttributeSet;
 import android.util.Log;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.View;
+import android.view.*;
 import android.view.View.OnClickListener;
-import android.view.ViewConfiguration;
-import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.widget.AdapterView;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
-import android.widget.SeekBar;
+import android.widget.*;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.SlidingDrawer;
 import android.widget.SlidingDrawer.OnDrawerCloseListener;
 import android.widget.SlidingDrawer.OnDrawerOpenListener;
-import android.widget.TextView;
-
 import org.npr.android.util.DisplayUtils;
 import org.npr.android.util.PlaylistEntry;
 import org.npr.android.util.PlaylistProvider;
@@ -104,14 +89,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private int startY;
   private boolean cancelDown;
 
-  private RelativeLayout sponsorshipWindow;
-
-  private enum sponsorshipWindowStates {
-    WindowNeedsMeasurement, WindowTooNarrow, WindowReadyToBeShown,
-    WindowVisible, WindowHasBeenShown
-  }
-
-  private sponsorshipWindowStates sponsorshipWindowState = sponsorshipWindowStates.WindowTooNarrow;
 
   private enum ClickedItem {
     rewind, rewind30, playPause, fastForward, contractedPlay, progressbar
@@ -124,7 +101,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private BroadcastReceiver closeReceiver;
   private BroadcastReceiver playlistChangedReceiver;
 
-  private static final int MSG_AD_CLOSE = 0;
   private GestureDetector gestureDetector;
   private final Handler handler = new Handler() {
     @Override
@@ -159,19 +135,36 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
           listItem.startAnimation(fling);
           break;
-
-        case MSG_AD_CLOSE:
-          if (sponsorshipWindowState == sponsorshipWindowStates.WindowVisible) {
-            hideSponsorshipWindow();
-          }
-          break;
       }
     }
   };
 
+  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context) {
     super(context);
     this.context = context;
+  }
+
+  @SuppressWarnings({"UnusedDeclaration"})
+  public PlaylistView(Context context, AttributeSet attrs) {
+    super(context, attrs);
+    this.context = context;
+  }
+
+  @SuppressWarnings({"UnusedDeclaration"})
+  public PlaylistView(Context context, AttributeSet attrs, int defStyle) {
+    super(context, attrs, defStyle);
+    this.context = context;
+  }
+
+  /**
+   * Returns a pointer to the SlidingDrawer for the
+   * player window.
+   *
+   * @return The player's SlidingDrawer
+   */
+  public SlidingDrawer getPlayerDrawer() {
+    return drawer;
   }
 
   @Override
@@ -192,9 +185,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     drawer.setOnDrawerCloseListener(this);
     touchSlop = ViewConfiguration.getTouchSlop();
     handle = (RelativeLayout) findViewById(R.id.handle);
-
-    sponsorshipWindow = (RelativeLayout) findViewById(R.id.sponsorshipWindow);
-    sponsorshipWindow.setVisibility(View.INVISIBLE);
 
     playerContracted = (RelativeLayout) findViewById(R.id.player_contracted);
     playerExpanded = (RelativeLayout) findViewById(R.id.player_expanded);
@@ -280,40 +270,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     refreshList();
   }
 
-  @Override
-  protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-    super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-
-    if (sponsorshipWindowState == sponsorshipWindowStates.WindowNeedsMeasurement) {
-      if (sponsorshipWindow.getMeasuredWidth() >= 240) {
-        sponsorshipWindowState = sponsorshipWindowStates.WindowReadyToBeShown;
-        WebView sponsorshipView = (WebView) findViewById(R.id.sponsorshipView);
-        sponsorshipView.setBackgroundColor(0);
-
-        WebSettings webSettings = sponsorshipView.getSettings();
-        webSettings.setSavePassword(false);
-        webSettings.setSaveFormData(false);
-        webSettings.setJavaScriptEnabled(true);
-        webSettings.setSupportZoom(false);
-
-        sponsorshipView.loadDataWithBaseURL(null,
-            "<html><head><style type='text/css'>body {padding:0;margin:0} " +
-                "p {padding:0 0 3px 0;margin:0;color:white;" +
-                "font-size:10px;font-family:Helvetica,Arial," +
-                "sans-serif;text-align:center}</style>" +
-                "</head><body><script type='text/javascript' " +
-                "src='http://ad.doubleclick.net/adj/" +
-                "n6735.NPR.MOBILE/android;sz=320x50' />" +
-                "</body></html>",
-            "text/html", "utf-8", null);
-        ImageButton dismissSponsorshipView =
-            (ImageButton) findViewById(R.id.dismissSponsorshipView);
-        dismissSponsorshipView.setOnClickListener(this);
-      } else {
-        sponsorshipWindowState = sponsorshipWindowStates.WindowTooNarrow;
-      }
-    }
-  }
 
   private void refreshList() {
     playlistAdapter.getCursor().requery();
@@ -323,7 +279,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   @Override
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
-    Log.d(LOG_TAG, "detached from window");
     // Emulator calls detach twice, so clear receiver
     if (changeReceiver != null) {
       context.unregisterReceiver(changeReceiver);
@@ -365,10 +320,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
         refreshList();
         configurePlayerControls();
         break;
-
-      case R.id.dismissSponsorshipView:
-        hideSponsorshipWindow();
-        break;
     }
   }
 
@@ -384,9 +335,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   }
 
   private void playNow(final Playable playable, String action) {
-    if (sponsorshipWindowState == sponsorshipWindowStates.WindowReadyToBeShown) {
-      showSponsorshipWindow();
-    }
     startPlaylistSpinners();
     Intent intent = new Intent(context, PlaybackService.class);
     intent.setAction(action);
@@ -1040,66 +988,4 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     return playlistAdapter.getActiveId();
   }
 
-  private void showSponsorshipWindow() {
-    if (sponsorshipWindowState != sponsorshipWindowStates.WindowReadyToBeShown) {
-      return;
-    }
-
-    Animation scroll_in_from_bottom = AnimationUtils.loadAnimation(
-        context,
-        R.anim.scroll_in_from_bottom
-    );
-    scroll_in_from_bottom.setFillAfter(true);
-    scroll_in_from_bottom.setAnimationListener(new Animation.AnimationListener() {
-
-      @Override
-      public void onAnimationStart(Animation animation) {
-      }
-
-      @Override
-      public void onAnimationEnd(Animation animation) {
-        handler.sendEmptyMessageDelayed(MSG_AD_CLOSE, 10000);
-      }
-
-      @Override
-      public void onAnimationRepeat(Animation animation) {
-
-      }
-
-    });
-    sponsorshipWindow.startAnimation(scroll_in_from_bottom);
-    sponsorshipWindowState = sponsorshipWindowStates.WindowVisible;
-  }
-
-  private void hideSponsorshipWindow() {
-    if (sponsorshipWindowState != sponsorshipWindowStates.WindowVisible) {
-      return;
-    }
-
-    sponsorshipWindowState = sponsorshipWindowStates.WindowReadyToBeShown;
-
-    Animation scroll_out_bottom = AnimationUtils.loadAnimation(
-        context,
-        R.anim.scroll_out_bottom
-    );
-    scroll_out_bottom.setFillAfter(true);
-    scroll_out_bottom.setAnimationListener(new Animation.AnimationListener() {
-
-      @Override
-      public void onAnimationStart(Animation animation) {
-      }
-
-      @Override
-      public void onAnimationEnd(Animation animation) {
-      }
-
-      @Override
-      public void onAnimationRepeat(Animation animation) {
-
-      }
-
-    });
-    sponsorshipWindow.startAnimation(scroll_out_bottom);
-    sponsorshipWindow.setVisibility(View.INVISIBLE);
-  }
 }

@@ -23,11 +23,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.*;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageView;
@@ -182,36 +183,15 @@ public class NewsListActivity extends TitleActivity implements
     TextView titleRight = (TextView) findViewById(R.id.TitleRight);
     titleRight.setTextColor(getResources().getColor(R.color.news_title_text));
 
+    ViewGroup bannerHolder = (ViewGroup) findViewById(R.id.SponsorshipBanner);
+    ViewGroup.inflate(this, R.layout.banner, bannerHolder);
+    ((BannerView) bannerHolder.getChildAt(0))
+        .setPlayerView(getPlaylistView());
+
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news, container);
 
     listView = (ListView) findViewById(R.id.ListView01);
-
-    View header = LayoutInflater.from(this)
-        .inflate(R.layout.list_header, listView, false);
-
-    WebView sponsorshipWindow =
-        (WebView) header.findViewById(R.id.sponsorshipWindowHeader);
-
-    WebSettings webSettings = sponsorshipWindow.getSettings();
-    webSettings.setSavePassword(false);
-    webSettings.setSaveFormData(false);
-    webSettings.setJavaScriptEnabled(true);
-    webSettings.setSupportZoom(false);
-
-    long ord = (long) (Math.random() * 10000000000000000L);
-    String html = String.format(
-        "<html><head><style type=\"text/css\">body {padding:0;margin:0;text-align:center;background-color:black;}" +
-            "p {margin:0;padding:0;font-family:sans-serif;font-size:x-small;color:white;}</style></head>" +
-            "<body><script type=\"text/javascript\" " +
-            "src=\"http://ad.doubleclick.net/adj/n6735.NPR.MOBILE/android_npr;sz=320x50;ord=%1$d?\">" +
-            "</script>" +
-            "</body></html>",
-        ord);
-    Log.d(LOG_TAG, html);
-    sponsorshipWindow.loadDataWithBaseURL(null, html, "text/html", "utf-8",
-        null);
-    listView.addHeaderView(header);
 
     listView.setOnItemClickListener(this);
     listAdapter = new NewsListAdapter(this);
@@ -236,10 +216,12 @@ public class NewsListActivity extends TitleActivity implements
   }
 
 
+
   @Override
   protected void onStart() {
     super.onStart();
     handler.postDelayed(updateTime, UPDATE_SHORT_PERIOD);
+
   }
 
   @Override

@@ -163,4 +163,5 @@
     <item>Special Series</item>
     <item>Other</item>
   </array>
+  <string name="banner_support">support comes from</string>
 </resources>
