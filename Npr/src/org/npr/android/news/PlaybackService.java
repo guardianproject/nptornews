@@ -502,6 +502,12 @@ public class PlaybackService extends Service implements
       if (mediaPlayer != null) {
         if (mediaPlayerHasStarted) {
           mediaPlayer.release();
+        } else {
+          mediaPlayer.setOnBufferingUpdateListener(null);
+          mediaPlayer.setOnCompletionListener(null);
+          mediaPlayer.setOnErrorListener(null);
+          mediaPlayer.setOnInfoListener(null);
+          mediaPlayer.setOnPreparedListener(null);
         }
         mediaPlayer = null;
       }
