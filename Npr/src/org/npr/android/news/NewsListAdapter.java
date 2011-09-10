@@ -46,6 +46,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   private RootActivity rootActivity = null;
   private final PlaylistRepository repository;
   private long lastUpdate = -1;
+  private StoriesLoadedListener storiesLoadedListener;
 
   public NewsListAdapter(Context context) {
     super(context, R.layout.news_item);
@@ -76,6 +77,9 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
           if (!endReached) {
             add(null);
           }
+        }
+        if (storiesLoadedListener != null) {
+          storiesLoadedListener.storiesLoaded();
         }
       } else {
         Toast.makeText(rootActivity,
@@ -142,7 +146,13 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       // view and will be in italics
       name.setTypeface(name.getTypeface(), Typeface.BOLD);
 
-      topic.setText(story.getSlug());
+      String topicText = story.getSlug();
+      for (Story.Parent p : story.getParentTopics()) {
+        if (p.isPrimary()) {
+          topicText = p.getTitle();
+        }
+      }
+      topic.setText(topicText.toLowerCase());
       topic.setVisibility(View.VISIBLE);
 
       String imageUrl = null;
@@ -248,6 +258,23 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
    */
   public long getLastUpdate() {
     return lastUpdate;
+  }
+
+
+  /**
+   * A call back that can be used to be notified when stories are done
+   * loading.
+   */
+  public interface StoriesLoadedListener {
+    void storiesLoaded();
+  }
+
+  /**
+   * Sets a listener to be notified when stories are done loading
+   * @param listener A {@link StoriesLoadedListener}
+   */
+  public void setStoriesLoadedListener(StoriesLoadedListener listener) {
+    storiesLoadedListener = listener;
   }
 
   private class ImageLoadListener implements ImageThreadLoader.ImageLoadedListener {

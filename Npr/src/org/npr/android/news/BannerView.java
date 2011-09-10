@@ -151,9 +151,12 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
 
+    handler.removeMessages(MSG_START_CLOSE);
     handler.removeMessages(MSG_SCROLL_IN);
     handler.removeMessages(MSG_SCROLL_OUT);
   }
+
+
 
   /**
    * Allows assignment of the play list view so that the
@@ -183,7 +186,9 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     setOrientation(LinearLayout.HORIZONTAL);
 
     // Some calculated dimensions
+    int dim3 = DisplayUtils.convertToDIP(context, 3);
     int dim6 = DisplayUtils.convertToDIP(context, 6);
+    int dim33 = DisplayUtils.convertToDIP(context, 33);
     int dim53 = DisplayUtils.convertToDIP(context, 53);
     int dim214 = DisplayUtils.convertToDIP(context, 214);
 
@@ -201,10 +206,12 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     addView(left);
 
     webView = new WebView(context);
-    LayoutParams webLayout = new LayoutParams(dim214, 50, 0);
+    LayoutParams webLayout = new LayoutParams(dim214, dim33, 0);
     webLayout.setMargins(dim6, dim6, dim6, dim6);
     webLayout.gravity = Gravity.CENTER;
     webView.setLayoutParams(webLayout);
+    webView.setBackgroundColor(0); // Transparent to show resource
+    webView.setBackgroundResource(R.drawable.banner_item_background);
     addView(webView);
 
     ImageButton right = new ImageButton(context);
@@ -213,6 +220,8 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
         LayoutParams.WRAP_CONTENT,
         1
     );
+    // Set padding so it feels more centered
+    right.setPadding(0, dim3, dim3, 0);
     closeLayout.gravity = Gravity.CENTER;
     right.setLayoutParams(closeLayout);
     right.setBackgroundDrawable(null);
@@ -236,6 +245,15 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     hideSponsorshipWindow();
   }
 
+  /**
+   * Starts the ten-second timer for when the sponsorship
+   * view will auto-close.
+   */
+  public void startCloseTimer() {
+    if (sponsorshipWindowState == SponsorshipWindowStates.Visible) {
+      handler.sendEmptyMessageDelayed(MSG_START_CLOSE, BANNER_VISIBLE);
+    }
+  }
 
   private void showSponsorshipWindow() {
     if (sponsorshipWindowState != SponsorshipWindowStates.ReadyToBeShown) {
@@ -249,7 +267,6 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
         "utf-8", null);
 
     sponsorshipWindowState = SponsorshipWindowStates.Opening;
-    handler.sendEmptyMessageDelayed(MSG_START_CLOSE, BANNER_VISIBLE);
     handler.sendEmptyMessage(MSG_SCROLL_IN);
   }
 

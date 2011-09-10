@@ -54,6 +54,7 @@ public class NewsListActivity extends TitleActivity implements
 
   protected NewsListAdapter listAdapter;
   private ListView listView;
+  private BannerView bannerView;
 
   private static final Map<String, Story> storyCache = new HashMap<String, Story>();
 
@@ -185,8 +186,8 @@ public class NewsListActivity extends TitleActivity implements
 
     ViewGroup bannerHolder = (ViewGroup) findViewById(R.id.SponsorshipBanner);
     ViewGroup.inflate(this, R.layout.banner, bannerHolder);
-    ((BannerView) bannerHolder.getChildAt(0))
-        .setPlayerView(getPlaylistView());
+    bannerView = (BannerView) bannerHolder.getChildAt(0);
+    bannerView.setPlayerView(getPlaylistView());
 
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news, container);
@@ -195,6 +196,7 @@ public class NewsListActivity extends TitleActivity implements
 
     listView.setOnItemClickListener(this);
     listAdapter = new NewsListAdapter(this);
+    listAdapter.setStoriesLoadedListener(listener);
     listView.setAdapter(listAdapter);
 
     // Gesture detection
@@ -215,6 +217,12 @@ public class NewsListActivity extends TitleActivity implements
     addStories();
   }
 
+  private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
+    @Override
+    public void storiesLoaded() {
+      bannerView.startCloseTimer();
+    }
+  };
 
 
   @Override
@@ -511,7 +519,7 @@ public class NewsListActivity extends TitleActivity implements
         return;
       }
       String label =
-          String.format("Updated %1$s ago",
+          String.format(getString(R.string.msg_update_format),
               TimeUtils.formatMillis(
                   System.currentTimeMillis() - lastUpdate,
                   TimeUnit.DAYS,
