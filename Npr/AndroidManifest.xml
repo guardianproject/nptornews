@@ -10,13 +10,17 @@
     android:name="NewsApplication">
     <activity
       android:name="StationListActivity"
-      android:windowSoftInputMode="adjustPan"/>
+      android:windowSoftInputMode="adjustPan"
+      android:screenOrientation="portrait"/>
     <activity
-      android:name="StationDetailsActivity"/>
+      android:name="StationDetailsActivity"
+      android:screenOrientation="portrait"/>
     <activity
-      android:name="NewsStoryActivity"/>
+      android:name="NewsStoryActivity"
+      android:screenOrientation="portrait"/>
     <activity
-      android:name="NewsListActivity">
+      android:name="NewsListActivity"
+      android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
@@ -27,27 +31,37 @@
       </intent-filter>
     </activity>
     <activity
-      android:name="NewsTopicActivity"/>
+      android:name="NewsTopicActivity"
+      android:screenOrientation="portrait"/>
     <activity
-      android:name="AllProgramsActivity"/>
+      android:name="AllProgramsActivity"
+      android:screenOrientation="portrait"/>
     <activity
-      android:name="AboutActivity"/>
+      android:name="AboutActivity"
+      android:screenOrientation="portrait"/>
     <activity
       android:name="SearchActivity"
-      android:windowSoftInputMode="adjustPan|stateVisible"/>
+      android:windowSoftInputMode="adjustPan|stateVisible"
+      android:screenOrientation="portrait"/>
     <activity
-      android:name="PodcastActivity"/>
+      android:name="PodcastActivity"
+      android:screenOrientation="portrait"/>
     <activity
       android:name="SearchResultsActivity"
-      android:windowSoftInputMode="adjustPan|stateHidden">
+      android:windowSoftInputMode="adjustPan|stateHidden"
+            android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.SEARCH"/>
       </intent-filter>
       <meta-data android:name="android.app.searchable"
                  android:resource="@xml/searchable"/>
     </activity>
-    <activity android:name="ProgramStoryListActivity"/>
-    <activity android:name="HourlyNewsActivity"/>
+    <activity
+      android:name="ProgramStoryListActivity"
+      android:screenOrientation="portrait"/>
+    <activity
+      android:name="HourlyNewsActivity"
+      android:screenOrientation="portrait"/>
     <provider
       android:name="org.npr.android.util.PlaylistProvider"
       android:authorities="org.npr.android.util.Playlist"/>

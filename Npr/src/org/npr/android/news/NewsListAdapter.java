@@ -152,7 +152,11 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
           topicText = p.getTitle();
         }
       }
-      topic.setText(topicText.toLowerCase());
+      if (topicText != null) {
+        topic.setText(topicText.toLowerCase());
+      } else {
+        topic.setText("");
+      }
       topic.setVisibility(View.VISIBLE);
 
       String imageUrl = null;
