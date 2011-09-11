@@ -262,7 +262,7 @@ public class AllProgramsActivity extends TitleActivity implements
       if (item != null && item.isHeader()) {
         v.setEnabled(false);
         v.setBackgroundDrawable(
-            getResources().getDrawable(R.drawable.news_list_title_background)
+            getResources().getDrawable(R.drawable.top_stories_title_background)
         );
         v.getLayoutParams().height =
           DisplayUtils.convertToDIP(getContext(), 30);

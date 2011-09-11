@@ -177,8 +177,7 @@ public class NewsListActivity extends TitleActivity implements
     // TODO: move this to a layout?
     View titleBar = findViewById(R.id.TitleBar);
     titleBar.setBackgroundDrawable(getResources().getDrawable(
-        R.drawable.news_list_title_background));
-    titleBar.getLayoutParams().height = DisplayUtils.convertToDIP(this, 20);
+        R.drawable.top_stories_title_background));
     TextView titleText = (TextView) findViewById(R.id.TitleText);
     titleText.setTextColor(getResources().getColor(R.color.news_title_text));
     TextView titleRight = (TextView) findViewById(R.id.TitleRight);
@@ -370,8 +369,9 @@ public class NewsListActivity extends TitleActivity implements
 
       @Override
       public void onAnimationEnd(Animation animation) {
-        icon.setImageDrawable(getResources().getDrawable(R.drawable
-            .speaker));
+        icon.setImageDrawable(getResources().getDrawable(
+            R.drawable.speaker_icon
+        ));
         // Need to update the list after animation so the correct item is animated
         if (flungStory != null) {
           PlaylistRepository playlistRepository =

@@ -125,7 +125,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       if (isPlayable(story)) {
         if (repository.getPlaylistItemFromStoryId(story.getId()) == null) {
           icon.setImageDrawable(
-              getContext().getResources().getDrawable(R.drawable.speaker)
+              getContext().getResources().getDrawable(R.drawable.speaker_icon)
           );
         } else {
           icon.setImageDrawable(

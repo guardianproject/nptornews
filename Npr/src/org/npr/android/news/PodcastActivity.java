@@ -121,7 +121,7 @@ public class PodcastActivity extends RootActivity implements
       } else if (listItem.isHeader()) {
         convertView.setEnabled(false);
         convertView.setBackgroundDrawable(getResources().getDrawable(
-            R.drawable.news_list_title_background));
+            R.drawable.top_stories_title_background));
         convertView.getLayoutParams().height =
             DisplayUtils.convertToDIP(getContext(), 20);
         convertView.setPadding(10, 0, 10, 0);
