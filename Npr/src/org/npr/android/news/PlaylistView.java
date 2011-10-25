@@ -422,15 +422,15 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     @Override
     public void onReceive(Context context, Intent intent) {
       int duration = intent.getIntExtra(PlaybackService.EXTRA_DURATION, 1);
-      Log.d(LOG_TAG, "Playback update; duration = " + duration + " millsecs");
       // Drop out if no duration is given (flicker?)
       if (duration == 1) {
+        Log.v(LOG_TAG, "Playback update; no duration dropout");
         return;
       }
 
       int position = intent.getIntExtra(PlaybackService.EXTRA_POSITION, 0);
       int downloaded = intent.getIntExtra(PlaybackService.EXTRA_DOWNLOADED, 1);
-      Log.d(LOG_TAG, "Playback update; position = " + position + " millsecs; " +
+      Log.v(LOG_TAG, "Playback update; position = " + position + " millsecs; " +
           "downloaded = " + duration + " millsecs");
       boolean isPlaying = intent.getBooleanExtra(PlaybackService
           .EXTRA_IS_PLAYING, false);

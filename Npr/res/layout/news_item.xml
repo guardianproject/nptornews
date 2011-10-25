@@ -5,7 +5,7 @@
   android:gravity="center_vertical"
   android:padding="3dp"
   android:orientation="horizontal"
-  android:minHeight="?android:attr/listPreferredItemHeight">
+  android:minHeight="81dp">
   <ImageView
     android:id="@+id/NewsItemIcon"
     android:layout_width="35dp"
@@ -25,6 +25,7 @@
       android:id="@+id/NewsItemNameText"
       android:layout_height="wrap_content"
       android:layout_width="fill_parent"
+      android:layout_marginRight="6dp"
       android:gravity="center_vertical"
       android:textAppearance="@style/NewsItemTitle"/>
   </LinearLayout>

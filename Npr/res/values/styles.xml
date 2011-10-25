@@ -22,18 +22,18 @@
   </style>
 
   <style name="Banner">
-    <item name="android:background">@drawable/sponsorship_gradient_slice</item>
+    <item name="android:background">@color/black</item>
     <item name="android:textAppearance">@style/BannerText</item>
   </style>
   <style name="ViewTitle">
     <item name="android:background">@drawable/title_background</item>
     <item name="android:gravity">center_vertical</item>
-    <item name="android:layout_height">34dip</item>
+    <item name="android:layout_height">24dip</item>
     <item name="android:layout_width">fill_parent</item>
     <item name="android:paddingLeft">8dip</item>
     <item name="android:paddingRight">8dip</item>
-    <item name="android:paddingTop">4dip</item>
-    <item name="android:paddingBottom">2dip</item>
+    <item name="android:paddingTop">1dip</item>
+    <item name="android:paddingBottom">1dip</item>
   </style>
   <style name="ViewTitleText" parent="@android:style/TextAppearance">
     <item name="android:textSize">14sp</item>

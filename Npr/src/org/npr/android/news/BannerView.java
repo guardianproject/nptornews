@@ -15,6 +15,7 @@
 package org.npr.android.news;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.os.Handler;
@@ -31,7 +32,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.*;
 import org.npr.android.util.DisplayUtils;
-
+import org.npr.api.IPhoneTimersConfProvider;
 
 /**
  * Encapsulates the logic and layout of the sponsorship banner
@@ -43,22 +44,25 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   private static final int FRAME_DURATION = 50;
   private static final float ANIMATION_DURATION = 500f;
   private static final String LAYOUT =
-      "<html>" +
-          "<head>" +
-          "<meta name=\"viewport\" content=\"target-densitydpi=device-dpi, " +
-            "width=device-width\" />" +
-          "<style type=\"text/css\">" +
-          "body {padding:0;margin:0;text-align:center;background-color:#333;}" +
-          "p {display:none;}" +
-          "</style>" +
-          "</head>" +
-          "<body>" +
-          "<script type=\"text/javascript\"" +
+    "<html>" +
+      "<head>" +
+        "<meta name=\"viewport\" content=\"target-densitydpi=device-dpi, " +
+          "width=device-width\" />" +
+        "<style type=\"text/css\">" +
+        "body {padding:0;margin:0;text-align:center;background-color:#333;}" +
+        "p {display:none;}" +
+        "</style>" +
+      "</head>" +
+      "<body>" +
+        "<script type=\"text/javascript\"" +
           "src=\"http://ad.doubleclick.net/adj/n6735.NPR.MOBILE/android_npr;" +
           "sz=320x50;ord=%1$d?\">" +
-          "</script>" +
-          "</body>" +
-      "</html>";
+        "</script>" +
+      "</body>" +
+    "</html>";
+
+  private long noBannerUntilSystemTime = 0;
+  private long noBannerTimeIncrement = 120000;
 
   private ImageView animationView;
   private int startY;
@@ -157,12 +161,11 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   }
 
 
-
   /**
    * Allows assignment of the play list view so that the
    * banner can slide the player drawer down as it scrolls
    * off screen.
-   *
+   * <p/>
    * This enables the drawing cache for the drawer view.
    *
    * @param playlistView The view to animate down.
@@ -175,6 +178,22 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   }
 
   void init() {
+    Cursor cursor = context.getContentResolver().query(IPhoneTimersConfProvider.CONTENT_URL, null, null, null, null);
+    while (cursor.moveToNext()) {
+      String id = cursor.getString(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.NAME));
+      if (id.equals("banners")) {
+        noBannerTimeIncrement = cursor.getInt(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.TIMER_LENGTH)) * 1000;
+        break;
+      }
+    }
+
+    // Don't shown until increment has elapsed
+    if (System.currentTimeMillis() < noBannerUntilSystemTime) {
+      setVisibility(View.GONE);
+      return;
+    }
+    noBannerUntilSystemTime = System.currentTimeMillis() + noBannerTimeIncrement;
+
     DisplayMetrics metrics = new DisplayMetrics();
     ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE))
         .getDefaultDisplay()
@@ -378,5 +397,4 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     }
     return bitmap;
   }
-
 }

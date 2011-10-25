@@ -69,6 +69,9 @@
       android:name="org.npr.api.IPhoneNewsAppProgramsConfProvider"
       android:authorities="org.npr.apr.IPhoneNewsAppProgramsConf"/>
     <provider
+      android:name="org.npr.api.IPhoneTimersConfProvider"
+      android:authorities="org.npr.apr.IPhoneTimersConf"/>
+    <provider
       android:name="org.npr.android.util.FavoriteStationsProvider"
       android:authorities="org.npr.android.util.FavoriteStations"/>
 

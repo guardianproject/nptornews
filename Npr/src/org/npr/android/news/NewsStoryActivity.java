@@ -114,13 +114,13 @@ public class NewsStoryActivity extends RootActivity implements
     );
     layout.setMargins(0, 0, 0, DisplayUtils.convertToDIP(this, 95));
     ((ViewGroup) findViewById(R.id.TitleContent)).addView(workspace, layout);
-
+    boolean teaserOnly = getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false);
 
     for (int i = 0; i < storyIds.length; i++) {
       String storyId = storyIds[i];
       Story story = NewsListActivity.getStoryFromCache(storyId);
       stories.add(story);
-      layoutStory(story, i, storyIds.length);
+      layoutStory(story, i, storyIds.length, teaserOnly);
       if (storyId.equals(currentStoryId)) {
         trackerItem = new TrackerItem();
         workspace.setCurrentScreen(i);
@@ -166,7 +166,7 @@ public class NewsStoryActivity extends RootActivity implements
     super.onStop();
   }
 
-  private void layoutStory(Story story, int position, int total) {
+  private void layoutStory(Story story, int position, int total, boolean teaserOnly) {
     if (position >= stories.size()) {
       Log.e(LOG_TAG, "Attempt to get story view for position " + position +
           " beyond loaded stories");
@@ -251,7 +251,7 @@ public class NewsStoryActivity extends RootActivity implements
 
     TextWithHtml text = story.getTextWithHtml();
     String textHtml;
-    if (text != null) {
+    if (!teaserOnly && text != null) {
       StringBuilder sb = new StringBuilder();
       for (String paragraph : text.getParagraphs()) {
         sb.append("<p>").append(paragraph).append("</p>");

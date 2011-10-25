@@ -19,6 +19,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -73,12 +74,10 @@ public class NewsListActivity extends TitleActivity implements
     public void handleMessage(Message msg) {
       switch (msg.what) {
         case ListItemGestureListener.MSG_LONG_PRESS: {
-          lastLongPressPosition = msg.arg1;
 
-          // Offset 1 for header
-          int storyPosition = msg.arg1 - 1;
+            lastLongPressPosition = msg.arg1;
 
-          Story longPressStory = listAdapter.getItem(storyPosition);
+          Story longPressStory = listAdapter.getItem(msg.arg1);
           if (longPressStory != null && longPressStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
@@ -90,7 +89,7 @@ public class NewsListActivity extends TitleActivity implements
             if (playlistEntry == null) {
               addAndPulseIcon(listView.getChildAt(msg.arg1 -
                   listView.getFirstVisiblePosition()));
-              addStory(storyPosition, true);
+              addStory(msg.arg1, true);
             } else {
               PlaylistEntry activeEntry =
                   playlistRepository.getPlaylistItemFromId(getActiveId());
@@ -105,10 +104,8 @@ public class NewsListActivity extends TitleActivity implements
         break;
 
         case ListItemGestureListener.MSG_FLING: {
-          // Offset 1 for header
-          int storyPosition = msg.arg1 - 1;
 
-          flungStory = listAdapter.getItem(storyPosition);
+            flungStory = listAdapter.getItem(msg.arg1);
           if (flungStory != null && flungStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
@@ -123,7 +120,7 @@ public class NewsListActivity extends TitleActivity implements
                   msg.arg2,
                   true
               );
-              addStory(storyPosition, false);
+              addStory(msg.arg1, false);
             } else {
               animateListItemFling(
                   listView.getChildAt(msg.arg1 -
@@ -261,6 +258,10 @@ public class NewsListActivity extends TitleActivity implements
           listAdapter.getStoryIdList()
       );
       i.putExtra(Constants.EXTRA_STORY_ID, s.getId());
+      if (getIntent().hasExtra(Constants.EXTRA_TEASER_ONLY)) {
+          i.putExtra(Constants.EXTRA_TEASER_ONLY,
+                  getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false));
+      }
       startActivityWithoutAnimation(i);
     }
   }
