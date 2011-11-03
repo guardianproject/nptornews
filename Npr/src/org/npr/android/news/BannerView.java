@@ -61,7 +61,7 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
       "</body>" +
     "</html>";
 
-  private long noBannerUntilSystemTime = 0;
+  private static long noBannerUntilSystemTime = 0;
   private long noBannerTimeIncrement = 120000;
 
   private ImageView animationView;
