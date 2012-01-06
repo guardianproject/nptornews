@@ -177,6 +177,7 @@ public class NewsTopicActivity extends TitleActivity implements
     params.put(ApiConstants.PARAM_REQUIRED_ASSETS, "text");
     String url =
         ApiConstants.instance().createUrl(ApiConstants.STORY_PATH, params);
+    Log.d(LOG_TAG, "Loading topic url: " + url);
 
     Intent i = new Intent(this, NewsListActivity.class);
     i.putExtra(Constants.EXTRA_QUERY_URL, url);

@@ -37,6 +37,7 @@ import org.npr.android.util.PlaylistRepository;
 import org.npr.android.util.Tracker;
 import org.npr.android.util.Tracker.StoryDetailsMeasurement;
 import org.npr.android.widget.WorkspaceView;
+import org.npr.api.Book;
 import org.npr.api.Story;
 import org.npr.api.Story.Byline;
 import org.npr.api.Story.TextWithHtml;
@@ -91,8 +92,8 @@ public class NewsStoryActivity extends RootActivity implements
       currentStoryId = getIntent().getStringExtra(Constants.EXTRA_ACTIVITY_DATA);
     }
     String[] storyIds;
-    if (storyIdsString  == null) {
-      storyIds = new String[] {currentStoryId};
+    if (storyIdsString == null) {
+      storyIds = new String[]{currentStoryId};
     } else {
       storyIds = storyIdsString.split(",");
     }
@@ -127,7 +128,7 @@ public class NewsStoryActivity extends RootActivity implements
         trackerItem.orgId = story.getOrganizations().size() > 0 ?
             story.getOrganizations().get(0).getId() : null;
 
-        for (Story.Parent p : story.getParentTopics()) {
+        for (Story.Parent p : story.getParents()) {
           if (p.isPrimary()) {
             trackerItem.topicId = p.getId();
             break;
@@ -256,10 +257,38 @@ public class NewsStoryActivity extends RootActivity implements
       for (String paragraph : text.getParagraphs()) {
         sb.append("<p>").append(paragraph).append("</p>");
       }
+
       textHtml = String.format(HTML_FORMAT, sb.toString());
       // WebView can't load external images, so we need to strip them or it
       // may not render.
       textHtml = textHtml.replaceAll("<img .*/>", "");
+
+      // Load any book parents
+      for (Story.Parent parent : story.getParents()) {
+        if (parent.getType().equals("book")) {
+          sb = new StringBuilder(textHtml);
+          List<Book> books = NewsListActivity.getBooksFromCache(story.getId());
+          if (books != null) {
+            for (Book book : books) {
+              sb.append("<hr/>");
+              if (book.getPromoArt() != null) {
+                sb.append(
+                    String.format(
+                        "<div id=\"story-icon\"><img src=\"%s\" /></div>",
+                        book.getPromoArt())
+                );
+              }
+              sb.append(String.format("<p><b>%s</b><br/>", book.getTitle()));
+              sb.append(String.format("<i>By %s</i></p>", book.getAuthor()));
+              sb.append(book.getText());
+            }
+          }
+          textHtml = String.format(HTML_FORMAT, sb.toString());
+          // Book loads all books for the story, so break after one is found
+          break;
+        }
+      }
+
     } else {
       // Only show the teaser if there is no full-text.
       textHtml =
@@ -377,7 +406,7 @@ public class NewsStoryActivity extends RootActivity implements
       trackerItem.orgId = story.getOrganizations().size() > 0 ?
           story.getOrganizations().get(0).getId() : null;
 
-      for (Story.Parent p : story.getParentTopics()) {
+      for (Story.Parent p : story.getParents()) {
         if (p.isPrimary()) {
           trackerItem.topicId = p.getId();
           break;
@@ -442,7 +471,7 @@ public class NewsStoryActivity extends RootActivity implements
     @Override
     public void onReceive(Context context, Intent intent) {
       int len = stories.size();
-      for (int i = 0 ; i < len ; i++) {
+      for (int i = 0; i < len; i++) {
         View v = workspace.getChildAt(i);
         Button enqueue =
             (Button) v.findViewById(R.id.NewsStoryListenEnqueueButton);
@@ -461,10 +490,10 @@ public class NewsStoryActivity extends RootActivity implements
             (playlistId);
         if (pe == null) return;
         int len = stories.size();
-        for (int i = 0 ; i < len ; i++) {
+        for (int i = 0; i < len; i++) {
           View v = workspace.getChildAt(i);
           Button listenNow =
-            (Button) v.findViewById(R.id.NewsStoryListenNowButton);
+              (Button) v.findViewById(R.id.NewsStoryListenNowButton);
           listenNow.setEnabled(!stories.get(i).getId().equals(pe.storyID));
         }
       }

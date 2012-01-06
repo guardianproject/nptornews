@@ -62,11 +62,12 @@ public class Story extends ApiElement {
   private final List<PullQuote> pullQuotes;
   private final Text text;
   private final TextWithHtml textWithHtml;
-  private final List<Parent> parentTopics;
+  private final List<Parent> parents;
 
   public static class Thumbnail {
     @SuppressWarnings("unused")
     private final String medium;
+
     public Thumbnail(String medium) {
       this.medium = medium;
     }
@@ -79,6 +80,7 @@ public class Story extends ApiElement {
   public static class Toenail {
     @SuppressWarnings("unused")
     private final String medium;
+
     public Toenail(String medium) {
       this.medium = medium;
     }
@@ -88,17 +90,21 @@ public class Story extends ApiElement {
     private final String id;
     private final String name;
     private final String website;
+
     public Organization(String id, String name, String website) {
       this.id = id;
       this.name = name;
       this.website = website;
     }
+
     public String getId() {
       return id;
     }
+
     public String getName() {
       return name;
     }
+
     public String getWebsite() {
       return website;
     }
@@ -110,21 +116,26 @@ public class Story extends ApiElement {
     private final String type;
     private final String duration;
     private final List<Format> formats;
+
     public static class Format {
       private final String mp3;
       private final String wm;
       private final String rm;
+
       public Format(String mp3, String wm, String rm) {
         this.mp3 = mp3;
         this.wm = wm;
         this.rm = rm;
       }
+
       public String getMp3() {
         return mp3;
       }
+
       public String getWm() {
         return wm;
       }
+
       public String getRm() {
         return rm;
       }
@@ -136,15 +147,19 @@ public class Story extends ApiElement {
       this.duration = duration;
       this.formats = formats;
     }
+
     public List<Format> getFormats() {
       return formats;
     }
+
     public String getId() {
       return id;
     }
+
     public String getType() {
       return type;
     }
+
     public String getDuration() {
       return duration;
     }
@@ -168,9 +183,10 @@ public class Story extends ApiElement {
     private final String provider;
     @SuppressWarnings("unused")
     private final String copyright;
+
     public Image(String id, String type, String width, String src,
-        String hasBorder, String linkUrl, String producer, String provider,
-        String copyright) {
+                 String hasBorder, String linkUrl, String producer, String provider,
+                 String copyright) {
       this.id = id;
       this.type = type;
       this.width = width;
@@ -181,6 +197,7 @@ public class Story extends ApiElement {
       this.provider = provider;
       this.copyright = copyright;
     }
+
     public String getSrc() {
       return src;
     }
@@ -195,6 +212,7 @@ public class Story extends ApiElement {
     private final String caption;
     @SuppressWarnings("unused")
     private final String link;
+
     public RelatedLink(String id, String type, String caption, String link) {
       this.id = id;
       this.type = type;
@@ -208,6 +226,7 @@ public class Story extends ApiElement {
     private final String person;
     @SuppressWarnings("unused")
     private final String date;
+
     public PullQuote(String person, String date) {
       this.person = person;
       this.date = date;
@@ -264,17 +283,18 @@ public class Story extends ApiElement {
 
   public static class Parent {
     private final String id;
+    private final String type;
     private final boolean isPrimary;
     @SuppressWarnings("unused")
     private final String title;
     @SuppressWarnings("unused")
     private final String htmlLink;
-    @SuppressWarnings("unused")
     private final String apiLink;
 
-    public Parent(String id, boolean isPrimary, String title, String htmlLink,
-        String apiLink) {
+    public Parent(String id, String type, boolean isPrimary, String title, String htmlLink,
+                  String apiLink) {
       this.id = id;
+      this.type = type;
       this.isPrimary = isPrimary;
       this.title = title;
       this.htmlLink = htmlLink;
@@ -285,6 +305,10 @@ public class Story extends ApiElement {
       return id;
     }
 
+    public String getType() {
+      return type;
+    }
+
     public boolean isPrimary() {
       return isPrimary;
     }
@@ -292,17 +316,21 @@ public class Story extends ApiElement {
     public String getTitle() {
       return title;
     }
+
+    public String getApiLink() {
+      return apiLink;
+    }
   }
 
   public Story(String id, String link, String shortLink, String title,
                String subtitle,
-      String shortTitle, String teaser, String miniTeaser, String slug,
-      String storyDate, String pubDate, String lastModifiedDate,
-      String keywords, String priorityKeywords, List<Byline> bylines,
-      List<Thumbnail> thumbnails, List<Toenail> toenails,
-      List<Organization> organizations, List<Audio> audios, List<Image> images,
-      List<RelatedLink> relatedLinks, List<PullQuote> pullQuotes, Text text,
-      TextWithHtml textWithHtml, List<Parent> parentTopics) {
+               String shortTitle, String teaser, String miniTeaser, String slug,
+               String storyDate, String pubDate, String lastModifiedDate,
+               String keywords, String priorityKeywords, List<Byline> bylines,
+               List<Thumbnail> thumbnails, List<Toenail> toenails,
+               List<Organization> organizations, List<Audio> audios, List<Image> images,
+               List<RelatedLink> relatedLinks, List<PullQuote> pullQuotes, Text text,
+               TextWithHtml textWithHtml, List<Parent> parents) {
     super(id);
     this.link = link;
     this.shortLink = shortLink;
@@ -327,7 +355,7 @@ public class Story extends ApiElement {
     this.pullQuotes = pullQuotes;
     this.text = text;
     this.textWithHtml = textWithHtml;
-    this.parentTopics = parentTopics;
+    this.parents = parents;
   }
 
   public String getLink() {
@@ -436,8 +464,8 @@ public class Story extends ApiElement {
     return title;
   }
 
-  public List<Parent> getParentTopics() {
-    return parentTopics;
+  public List<Parent> getParents() {
+    return parents;
   }
 
   public static class StoryBuilder {
@@ -457,19 +485,20 @@ public class Story extends ApiElement {
     private String priorityKeywords;
     private final List<Byline> bylines = new LinkedList<Byline>();
     private final List<Thumbnail> thumbnails = new LinkedList<Thumbnail>();
-    private final List<Toenail> toenails  = new LinkedList<Toenail>();
-    private final List<Organization> organizations  = new LinkedList<Organization>();
+    private final List<Toenail> toenails = new LinkedList<Toenail>();
+    private final List<Organization> organizations = new LinkedList<Organization>();
     private final List<Audio> audios = new LinkedList<Audio>();
     private final List<Image> images = new LinkedList<Image>();
     private final List<RelatedLink> relatedLinks = new LinkedList<RelatedLink>();
     private final List<PullQuote> pullQuotes = new LinkedList<PullQuote>();
     private Text text;
     private TextWithHtml textWithHtml;
-    private final List<Parent> parentTopics = new LinkedList<Parent>();
+    private final List<Parent> parents = new LinkedList<Parent>();
 
     public StoryBuilder(String id) {
       this.id = id;
     }
+
     public StoryBuilder withLink(String link, String type) {
       if (type.equals("html")) {
         this.link = link;
@@ -586,17 +615,17 @@ public class Story extends ApiElement {
     }
 
     public StoryBuilder withParent(Parent parent) {
-      this.parentTopics.add(parent);
+      this.parents.add(parent);
       return this;
     }
 
     public Story build() {
       return new Story(id, link, shortLink, title, subtitle, shortTitle,
-        teaser,
-        miniTeaser, slug, storyDate, pubDate, lastModifiedDate, keywords,
-        priorityKeywords, bylines, thumbnails, toenails, organizations,
-        audios, images, relatedLinks, pullQuotes, text, textWithHtml,
-        parentTopics);
+          teaser,
+          miniTeaser, slug, storyDate, pubDate, lastModifiedDate, keywords,
+          priorityKeywords, bylines, thumbnails, toenails, organizations,
+          audios, images, relatedLinks, pullQuotes, text, textWithHtml,
+          parents);
     }
 
   }
@@ -652,7 +681,7 @@ public class Story extends ApiElement {
 
       StoryBuilder sb = new StoryBuilder(
           // Create an ID because podcast items don't have any
-          Long.toHexString(new Date().getTime() * 1000 + (long)(Math.random()
+          Long.toHexString(new Date().getTime() * 1000 + (long) (Math.random()
               * 1000))
       );
 
@@ -685,9 +714,9 @@ public class Story extends ApiElement {
           !node.hasChildNodes()) {
         return null;
       }
-      
+
       StoryBuilder sb = new StoryBuilder(node.getAttributes().getNamedItem(
-        "id").getNodeValue());
+          "id").getNodeValue());
       try {
         Log.d(LOG_TAG, "parsing story " + sb.id);
         for (Node n : new IterableNodeList(node.getChildNodes())) {
@@ -735,24 +764,32 @@ public class Story extends ApiElement {
     }
 
     private static Parent parseParent(Node node) {
-      String id = null, title = null;
+      String id = null, type = null, title = null, apiLink = null;
       boolean isPrimary = false;
       Attr idAttr = (Attr) node.getAttributes().getNamedItem("id");
       if (idAttr != null) {
         id = idAttr.getValue();
       }
       Attr typeAttr = (Attr) node.getAttributes().getNamedItem("type");
-      if (typeAttr != null && typeAttr.getValue().equals("primaryTopic")) {
-        isPrimary = true;
+      if (typeAttr != null) {
+        type = typeAttr.getValue();
+        if (typeAttr.equals("primaryTopic")) {
+          isPrimary = true;
+        }
       }
 
       for (Node n : new IterableNodeList(node.getChildNodes())) {
         String nodeName = n.getNodeName();
         if (nodeName.equals("title")) {
           title = NodeUtils.getTextContent(n);
+        } else if (nodeName.equals("link")) {
+          Attr childTypeAttr = (Attr) n.getAttributes().getNamedItem("type");
+          if (childTypeAttr != null && childTypeAttr.getValue().equals("api")) {
+            apiLink = NodeUtils.getTextContent(n);
+          }
         }
       }
-      return new Parent(id, isPrimary, title, null, null);
+      return new Parent(id, type, isPrimary, title, null, apiLink);
     }
 
     private static Organization parseOrganization(Node node) {
@@ -778,8 +815,7 @@ public class Story extends ApiElement {
         String nodeName = n.getNodeName();
         if (nodeName.equals("name")) {
           name = NodeUtils.getTextContent(n);
-        }
-        else if (nodeName.equals("link")) {
+        } else if (nodeName.equals("link")) {
           Attr typeAttr = (Attr) n.getAttributes().getNamedItem("type");
           if (typeAttr != null) {
             String type = typeAttr.getValue();
@@ -803,9 +839,32 @@ public class Story extends ApiElement {
       if (idAttr != null) {
         id = idAttr.getValue();
       }
-      Attr srcAttr = (Attr) node.getAttributes().getNamedItem("src");
-      if (srcAttr != null) {
-        src = srcAttr.getValue();
+
+      for (Node n : new IterableNodeList(node.getChildNodes())) {
+        if (n.getNodeName().equals("crop")) {
+          Attr typeAttr = (Attr) n.getAttributes().getNamedItem("type");
+          if (typeAttr != null && typeAttr.getValue().equals("square")) {
+            Attr srcAttr = (Attr) n.getAttributes().getNamedItem("src");
+            if (srcAttr != null) {
+              src = srcAttr.getValue();
+              break;
+            }
+          }
+        }
+      }
+
+      if (src == null) {
+        Attr srcAttr = (Attr) node.getAttributes().getNamedItem("src");
+        if (srcAttr != null) {
+          src = srcAttr.getValue();
+        }
+      }
+
+      try {
+        src = src.replaceAll("&s=[0-9]+", "");
+        src += "&s=13";
+      } catch (NullPointerException e) {
+        Log.e(LOG_TAG, "Error replacing size in story image parsing");
       }
 
       return new Image(id, type, width, src, hasBorder, linkUrl, producer,
@@ -829,7 +888,7 @@ public class Story extends ApiElement {
           }
         }
       }
-      for (Entry<Integer, String> e: paragraphMap.entrySet()) {
+      for (Entry<Integer, String> e : paragraphMap.entrySet()) {
         paragraphs.add(e.getValue());
       }
       return paragraphs;

@@ -22,11 +22,13 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
+import android.widget.Button;
 import android.widget.TextView;
-
 import org.apache.http.client.ClientProtocolException;
+import org.npr.android.util.FavoriteStationEntry;
 import org.npr.android.util.FavoriteStationsProvider;
+import org.npr.android.util.FavoriteStationsRepository;
+import org.npr.android.util.StationCache;
 import org.npr.api.Client;
 import org.npr.api.Station;
 import org.npr.api.Station.StationFactory;
@@ -35,20 +37,30 @@ import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 public class StationListAdapter extends ArrayAdapter<Station> {
   private static final String LOG_TAG = StationListAdapter.class.getName();
   private List<Station> data;
+  protected Context context;
 
-  public StationListAdapter(Context context) {
+  FavoriteStationsRepository favoriteStationsRepository;
+
+  public StationListAdapter(Context context, boolean showFavorites) {
     super(context, R.layout.station_item, R.id.StationItemNameText);
+    this.context = context;
+    if (showFavorites) {
+      favoriteStationsRepository =
+          new FavoriteStationsRepository(context.getContentResolver());
+    } else {
+      favoriteStationsRepository = null;
+    }
   }
 
   public int initializeList(String url) {
     // If we fail, then the list will be empty.
-    data = new LinkedList<Station>();
+    data = new ArrayList<Station>();
 
     Node stations = null;
     try {
@@ -70,13 +82,13 @@ public class StationListAdapter extends ArrayAdapter<Station> {
     Log.d(LOG_TAG, "stations: " + stations.getNodeName());
 
     data = StationFactory.parseStations(stations);
-    StationListActivity.addAllToStationCache(data);
+    StationCache.addAll(data);
     return 0;
   }
 
 
   public void initializeList(Cursor cursor) {
-    data = new LinkedList<Station>();
+    data = new ArrayList<Station>();
 
     while (cursor.moveToNext()) {
       Station.StationBuilder builder = new Station.StationBuilder(
@@ -131,16 +143,18 @@ public class StationListAdapter extends ArrayAdapter<Station> {
       frequency.setText("");
     }
 
+    if (favoriteStationsRepository != null) {
+      TextView preset = (TextView) line.findViewById(R.id.StationPresetView);
+      FavoriteStationEntry favoriteStationEntry =
+          favoriteStationsRepository.getFavoriteStationForStationId(station.getId());
+      if (favoriteStationEntry != null && favoriteStationEntry.preset != null) {
+        preset.setText(favoriteStationEntry.preset);
+        preset.setVisibility(View.VISIBLE);
+      } else {
+        preset.setVisibility(View.INVISIBLE);
+      }
+    }
 
-    ImageView image =
-        (ImageView) line.findViewById(R.id.StationItemPlayableImage);
-    ImageView placeholder =
-        (ImageView) line.findViewById(R.id.StationItemPlaceholderImage);
-    boolean hasAudio =
-        station.getPodcasts().size() + station.getAudioStreams().size() > 0;
-    image.setVisibility(hasAudio ? View.VISIBLE : View.GONE);
-    placeholder.setVisibility(hasAudio ? View.GONE : View.VISIBLE);
     return line;
   }
-
 }

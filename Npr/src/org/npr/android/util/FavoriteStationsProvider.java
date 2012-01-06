@@ -19,6 +19,7 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
@@ -32,7 +33,7 @@ import java.util.Arrays;
  *
  * Author: Jeremy Wadsack
  */
-public class FavoriteStationsProvider extends ContentProvider{
+public class FavoriteStationsProvider extends ContentProvider {
   private static final String LOG_TAG =
       FavoriteStationsProvider.class.getName();
 
@@ -40,7 +41,7 @@ public class FavoriteStationsProvider extends ContentProvider{
       .parse("content://org.npr.android.util.FavoriteStations");
 
   private static final String DATABASE_NAME = "favorite_stations.db";
-  private static final int DATABASE_VERSION = 1;
+  private static final int DATABASE_VERSION = 2;
   private static final String TABLE_NAME = "items";
 
   private FavoriteStationsHelper helper;
@@ -53,7 +54,7 @@ public class FavoriteStationsProvider extends ContentProvider{
 
   @Override
   public Cursor query(Uri uri, String[] projection, String selection,
-      String[] selectionArgs, String sortOrder) {
+                      String[] selectionArgs, String sortOrder) {
     SQLiteDatabase db = helper.getWritableDatabase();
     String realSelection = getSelectionFromId(uri, selection);
 
@@ -111,10 +112,11 @@ public class FavoriteStationsProvider extends ContentProvider{
     public static final String FREQUENCY = "frequency";
     public static final String BAND = "band";
     public static final String STATION_ID = "story_id";
-    public static final String[] COLUMNS = { NAME, MARKET, FREQUENCY, BAND,
-        STATION_ID };
-    public static final String[] ALL_COLUMNS = { BaseColumns._ID, NAME, MARKET,
-        FREQUENCY, BAND, STATION_ID };
+    public static final String PRESET = "preset";
+    public static final String[] COLUMNS = {NAME, MARKET, FREQUENCY, BAND,
+        STATION_ID, PRESET};
+    public static final String[] ALL_COLUMNS = {BaseColumns._ID, NAME, MARKET,
+        FREQUENCY, BAND, STATION_ID, PRESET};
 
     // This class cannot be instantiated
     private Items() {
@@ -133,7 +135,7 @@ public class FavoriteStationsProvider extends ContentProvider{
       db.execSQL("CREATE TABLE " + TABLE_NAME + " (" + Items._ID
           + " INTEGER PRIMARY KEY," + Items.NAME + " TEXT," + Items.MARKET
           + " TEXT," + Items.FREQUENCY + " TEXT," + Items.BAND
-          + " TEXT," + Items.STATION_ID + " TEXT"
+          + " TEXT," + Items.STATION_ID + " TEXT," + Items.PRESET + " TEXT"
           + ");");
     }
 
@@ -142,6 +144,21 @@ public class FavoriteStationsProvider extends ContentProvider{
       Log.w(FavoriteStationsHelper.class.getName(),
           "Upgrading database from version " + oldVersion +
               " to " + newVersion);
+
+      // Check if this new column exists, and add if it doesn't
+      try {
+        db.query(TABLE_NAME, new String[]{Items.PRESET}, null, null, null,
+            null, null);
+      } catch (SQLException e) {
+        // Column doesn't exist - so add it
+        Log.w(LOG_TAG, "Database update - adding Preset Number", e);
+        try {
+          db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN "
+              + Items.PRESET + " TEXT DEFAULT NULL;");
+        } catch (SQLException ex) {
+          Log.e(LOG_TAG, "", ex);
+        }
+      }
     }
   }
 }

@@ -21,12 +21,13 @@ import android.util.Log;
 import org.npr.android.util.PlaylistEntry;
 import org.npr.api.Podcast;
 import org.npr.api.Station;
+import org.npr.api.Story;
 
 public class Playable implements Parcelable {
   private static final String LOG_TAG = Playable.class.getName();
 
   private Playable(long id, String url, String title, boolean isStream,
-                  Class<?> activity, String activityData) {
+                   Class<?> activity, String activityData) {
     setId(id);
     setUrl(url);
     setTitle(title);
@@ -148,6 +149,15 @@ public class Playable implements Parcelable {
                                              Station.AudioStream stream) {
       return new Playable(-1, stream.getUrl(), stream.getTitle(), true,
           StationDetailsActivity.class, stationId);
+    }
+
+    public static Playable fromStory(Story story) {
+      return new Playable(-1, story.getPlayableUrl(), story.getTitle(),
+          false, NewsStoryActivity.class, null);
+    }
+
+    public static Playable fromURL(String url, String title, Class<?> activity) {
+      return new Playable(-1, url, title, false, activity, null);
     }
   }
 }

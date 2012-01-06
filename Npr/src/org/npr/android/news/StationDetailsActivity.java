@@ -25,16 +25,10 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-
+import android.widget.*;
 import org.npr.android.util.DisplayUtils;
 import org.npr.android.util.FavoriteStationsProvider;
+import org.npr.android.util.StationCache;
 import org.npr.android.util.Tracker;
 import org.npr.android.util.Tracker.StationDetailsMeasurement;
 import org.npr.api.Station;
@@ -199,7 +193,7 @@ public class StationDetailsActivity extends RootActivity implements
     } else if (getIntent().hasExtra(Constants.EXTRA_ACTIVITY_DATA)) {
       stationId = getIntent().getStringExtra(Constants.EXTRA_ACTIVITY_DATA);
     }
-    station = StationListActivity.getStationFromCache(stationId);
+    station = StationCache.getStation(stationId);
 
     String selection = FavoriteStationsProvider.Items.STATION_ID + " = ?";
     String[] selectionArgs = new String[1];

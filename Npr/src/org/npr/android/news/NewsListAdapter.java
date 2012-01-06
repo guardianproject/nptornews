@@ -27,6 +27,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
 import org.npr.android.util.PlaylistRepository;
+import org.npr.api.Book;
 import org.npr.api.Client;
 import org.npr.api.Story;
 import org.npr.api.Story.Audio;
@@ -94,7 +95,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     }
   };
 
-  private boolean isPlayable(Story story) {
+  public boolean isPlayable(Story story) {
     for (Audio a : story.getAudios()) {
       if (a.getType().equals("primary")) {
         for (Audio.Format f : a.getFormats()) {
@@ -147,7 +148,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       name.setTypeface(name.getTypeface(), Typeface.BOLD);
 
       String topicText = story.getSlug();
-      for (Story.Parent p : story.getParentTopics()) {
+      for (Story.Parent p : story.getParents()) {
         if (p.isPrimary()) {
           topicText = p.getTitle();
         }
@@ -205,6 +206,10 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     }).start();
   }
 
+  public void addAllStories(final String url) {
+    addMoreStories(url, Integer.MAX_VALUE);
+  }
+
   private boolean getMoreStories(String url, int count) {
 
     Node stories = null;
@@ -230,6 +235,16 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
           endReached = true;
         }
         NewsListActivity.addAllToStoryCache(moreStories);
+        for (Story story : moreStories) {
+          for (Story.Parent parent : story.getParents()) {
+            if (parent.getType().equals("book")) {
+              List<Book> books = Book.downloadBooks(parent.getApiLink(), story.getId());
+              if (books != null) {
+                NewsListActivity.addBooksToCache(story.getId(), books);
+              }
+            }
+          }
+        }
       }
     }
 
@@ -275,6 +290,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
 
   /**
    * Sets a listener to be notified when stories are done loading
+   *
    * @param listener A {@link StoriesLoadedListener}
    */
   public void setStoriesLoadedListener(StoriesLoadedListener listener) {
@@ -292,23 +308,21 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     }
 
     public void imageLoaded(Drawable imageBitmap) {
-      // Offset 1 for header
-      int storyPosition = position + 1;
-      View itemView = parent.getChildAt(storyPosition -
+      View itemView = parent.getChildAt(position -
           parent.getFirstVisiblePosition());
       if (itemView == null) {
         Log.w(LOG_TAG, "Could not find list item at position " +
-            storyPosition);
+            position);
         return;
       }
       ImageView img = (ImageView)
           itemView.findViewById(R.id.NewsItemImage);
       if (img == null) {
         Log.w(LOG_TAG, "Could not find image for list item at " +
-            "position " + storyPosition);
+            "position " + position);
         return;
       }
-      Log.d(LOG_TAG, "Drawing image at position " + storyPosition);
+      Log.d(LOG_TAG, "Drawing image at position " + position);
       img.setImageDrawable(imageBitmap);
     }
   }

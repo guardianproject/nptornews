@@ -22,7 +22,11 @@ import android.widget.Button;
 
 import org.npr.android.util.PlaylistRepository;
 import org.npr.android.util.Tracker;
+import org.npr.api.ApiConstants;
 import org.npr.api.Story;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Extends NewsListActivity to add a tool bar of buttons to Add all items to
@@ -30,11 +34,12 @@ import org.npr.api.Story;
  *
  * Author: Jeremy Wadsack
  */
-public class ProgramStoryListActivity extends NewsListActivity{
+public class ProgramStoryListActivity extends NewsListActivity {
   private static final String LOG_TAG =
     ProgramStoryListActivity.class.getName();
 
   private String liveStreamRss;
+  private boolean loadAll;
 
 
   @Override
@@ -48,14 +53,16 @@ public class ProgramStoryListActivity extends NewsListActivity{
     // the story list
     ViewGroup container = (ViewGroup) findViewById(R.id.TitleGroup);
     container.addView(
-      ViewGroup.inflate(
-        this,
-        R.layout.program_action_buttons,
-        null
-      ),
-      1
+        ViewGroup.inflate(
+            this,
+            R.layout.program_action_buttons,
+            null
+        ),
+        1
     );
 
+    listAdapter.setStoriesLoadedListener(listener);
+    loadAll = false;
     Button addAll = (Button) container.findViewById(R.id.add_all_to_playlist);
     addAll.setOnClickListener(this);
     Button findLiveStream =
@@ -65,31 +72,52 @@ public class ProgramStoryListActivity extends NewsListActivity{
 
   }
 
-
-  @Override
-  public void onClick(View v) {
-    super.onClick(v);
-    switch (v.getId()) {
-      case R.id.add_all_to_playlist:
+  private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
+    @Override
+    public void storiesLoaded() {
+      bannerView.startCloseTimer();
+      if (loadAll) {
+        loadAll = false;
         PlaylistRepository playlistRepository =
             new PlaylistRepository(getApplicationContext(), getContentResolver());
         for (int i = 0; i < listAdapter.getCount(); i++) {
           Story story = listAdapter.getItem(i);
           if (story != null &&
-              story.getPlayable() != null) {
+              listAdapter.isPlayable(story)) {
             playlistRepository.add(story);
             Tracker.LinkEvent e =
                 new Tracker.AddToPlaylistEvent(story.getPlayableUrl());
             Tracker.instance(getApplication()).trackLink(e);
           }
         }
+      }
+    }
+  };
+
+  @Override
+  public void onClick(View v) {
+    super.onClick(v);
+    switch (v.getId()) {
+      case R.id.add_all_to_playlist:
+        loadAll = true;
+        String url = getApiUrl();
+        if (url != null) {
+          // Adding these parameters to podcast urls (like WNYC) can break them
+          Map<String, String> params = new HashMap<String, String>();
+          params.put("startNum", "" + listAdapter.getCount());
+          url = ApiConstants.instance().addParams(url, params);
+        } else {
+          url = getPodcastUrl();
+        }
+        listAdapter.addAllStories(url);
         break;
+
       case R.id.find_live_stream:
         if (liveStreamRss != null) {
           Intent intent = new Intent(this, StationListActivity.class);
           intent.putExtra(
-            Constants.EXTRA_LIVE_STREAM_RSS_URL,
-            liveStreamRss
+              Constants.EXTRA_LIVE_STREAM_RSS_URL,
+              liveStreamRss
           );
           startActivity(intent);
         }
