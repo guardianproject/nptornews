@@ -48,6 +48,7 @@ import java.net.ConnectException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.sql.Connection;
 import java.util.List;
 
 public class PlaybackService extends Service implements
@@ -88,7 +89,9 @@ public class PlaybackService extends Service implements
   public static final String EXTRA_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
   public static final String EXTRA_IS_PLAYING = SERVICE_PREFIX + "IS_PLAYING";
   public static final String EXTRA_IS_PREPARED = SERVICE_PREFIX + "IS_PREPARED";
-  public static final String EXTRA_ERROR_MESSAGE = SERVICE_PREFIX + "ERROR_MESSAGE";
+
+  public static final String EXTRA_ERROR = SERVICE_PREFIX + "ERROR";
+  public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback}
 
   private MediaPlayer mediaPlayer;
   private boolean isPrepared = false;
@@ -671,8 +674,7 @@ public class PlaybackService extends Service implements
     Log.e(LOG_TAG, "Media player increment error count:" + errorCount);
     if (errorCount >= ERROR_RETRY_COUNT) {
       Intent intent = new Intent(SERVICE_ERROR_NAME);
-      intent.putExtra(EXTRA_ERROR_MESSAGE,
-          getString(R.string.msg_playback_error));
+      intent.putExtra(EXTRA_ERROR, PLAYBACK_SERVICE_ERROR.Playback.ordinal());
       getApplicationContext().sendBroadcast(intent);
     }
   }
@@ -684,8 +686,7 @@ public class PlaybackService extends Service implements
           " and trying again in 30 seconds.");
 
       Intent intent = new Intent(SERVICE_ERROR_NAME);
-      intent.putExtra(EXTRA_ERROR_MESSAGE,
-          getString(R.string.msg_playback_connection_error));
+      intent.putExtra(EXTRA_ERROR, PLAYBACK_SERVICE_ERROR.Connection.ordinal());
       getApplicationContext().sendBroadcast(intent);
 
       // If a stream, increment since it could be bad

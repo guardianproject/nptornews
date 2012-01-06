@@ -285,9 +285,7 @@ public class Story extends ApiElement {
     private final String id;
     private final String type;
     private final boolean isPrimary;
-    @SuppressWarnings("unused")
     private final String title;
-    @SuppressWarnings("unused")
     private final String htmlLink;
     private final String apiLink;
 
@@ -861,8 +859,7 @@ public class Story extends ApiElement {
       }
 
       try {
-        src = src.replaceAll("&s=[0-9]+", "");
-        src += "&s=13";
+        src = src.replaceAll("&s=[0-9]+", "&s=13");
       } catch (NullPointerException e) {
         Log.e(LOG_TAG, "Error replacing size in story image parsing");
       }

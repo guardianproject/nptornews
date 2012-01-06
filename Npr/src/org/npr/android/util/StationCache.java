@@ -26,8 +26,10 @@ public class StationCache {
       new Hashtable<String, StationEntry>();
 
   public static void addAll(List<Station> stations) {
-    for (Station station : stations) {
-      stationCache.put(station.getId(), new StationEntry(station));
+    synchronized (stationCache) {
+      for (Station station : stations) {
+        stationCache.put(station.getId(), new StationEntry(station));
+      }
     }
   }
 
@@ -48,6 +50,8 @@ public class StationCache {
   }
 
   public static void clear() {
-    stationCache.clear();
+    synchronized (stationCache) {
+      stationCache.clear();
+    }
   }
 }

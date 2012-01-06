@@ -114,15 +114,15 @@ public class StationListActivity extends TitleActivity implements
     lv.setOnItemClickListener(StationListActivity.this);
     lv.setOnItemLongClickListener(StationListActivity.this);
 
-    if (mode != Mode.favoriteStations) {
-      loadFromQuery(queryUrl);
-    } else {
+    if (mode == Mode.favoriteStations) {
       TextView presetInstructions = (TextView) findViewById(R.id.preset_instructions);
       if (favoriteStationsRepository.getItemCount() > 0) {
         presetInstructions.setVisibility(View.VISIBLE);
       } else {
         presetInstructions.setVisibility(View.GONE);
       }
+    } else {
+      loadFromQuery(queryUrl);
     }
 
     Button locateButton = (Button) findViewById(R.id.StationSearchButton);
@@ -322,47 +322,52 @@ public class StationListActivity extends TitleActivity implements
     startActivityWithoutAnimation(i);
   }
 
-  private void setPreset(int item) {
-    if (item == 10) {
-      Station station = listAdapter.getItem(selectedPosition);
-      favoriteStationsRepository.removePreset(station.getId());
-    } else {
-      favoriteStationsRepository.setPreset(
-          listAdapter.getItem(selectedPosition), Integer.toString(item + 1));
-    }
+  private void removePreset() {
+    Station station = listAdapter.getItem(selectedPosition);
+    favoriteStationsRepository.removePreset(station.getId());
+    listAdapter.notifyDataSetChanged();
+  }
+
+  private void setPreset(int presetNumberSelected) {
+    favoriteStationsRepository.setPreset(
+        listAdapter.getItem(selectedPosition), Integer.toString(presetNumberSelected + 1));
     listAdapter.notifyDataSetChanged();
   }
 
   @Override
   public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 
-    if (mode == Mode.favoriteStations) {
-      selectedPosition = position;
-
-      int presetNumber = 10;
-      FavoriteStationEntry favoriteStationEntry =
-          favoriteStationsRepository.getFavoriteStationForStationId(
-              listAdapter.getItem(position).getId());
-      if (favoriteStationEntry != null &&
-          favoriteStationEntry.preset != null &&
-          favoriteStationEntry.preset.length() > 0) {
-        presetNumber = Integer.parseInt(favoriteStationEntry.preset) - 1;
-      }
-      AlertDialog.Builder builder = new AlertDialog.Builder(this);
-      builder.setTitle("Pick a preset");
-      builder.setSingleChoiceItems(presets, presetNumber, new DialogInterface.OnClickListener() {
-        public void onClick(DialogInterface dialog, int item) {
-          setPreset(item);
-          dialog.dismiss();
-        }
-      });
-
-      AlertDialog alert = builder.create();
-      alert.show();
-
-      return true;
+    if (mode != Mode.favoriteStations) {
+      return false;
     }
-    return false;
+    selectedPosition = position;
+
+    int presetNumber = 10;
+    FavoriteStationEntry favoriteStationEntry =
+        favoriteStationsRepository.getFavoriteStationForStationId(
+            listAdapter.getItem(position).getId());
+    if (favoriteStationEntry != null &&
+        favoriteStationEntry.preset != null &&
+        favoriteStationEntry.preset.length() > 0) {
+      presetNumber = Integer.parseInt(favoriteStationEntry.preset) - 1;
+    }
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle("Pick a preset");
+    builder.setSingleChoiceItems(presets, presetNumber, new DialogInterface.OnClickListener() {
+      public void onClick(DialogInterface dialog, int item) {
+        if (item == 10) {
+          removePreset();
+        } else {
+          setPreset(item);
+        }
+        dialog.dismiss();
+      }
+    });
+
+    AlertDialog alert = builder.create();
+    alert.show();
+
+    return true;
   }
 
   private String populateLocalStationParams(Map<String, String> params) {
