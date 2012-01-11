@@ -1,0 +1,31 @@
+Npr/res/raw/api_key.txt
+
+# OS X Ignores
+.DS_Store
+Icon?
+
+# Thumbnails
+._*
+
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes
+
+# IDEA Ignores
+*.iml
+*.ipr
+*.iws
+.idea/
+local.properties
+
+# Generic Android ignores
+bin/
+target
+gen/
+out/
+
+# Subversion
+.svn/
+svn/
+.externalToolBuilders/
+svn-revision.build.xml
