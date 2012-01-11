@@ -74,7 +74,7 @@ public class Program extends StoryGrouping {
     @Override
     public List<Program> downloadStoryGroupings(int count) {
       // Get NPRML list
-      List<Program> list =  super.downloadStoryGroupings(-1);
+      List<Program> list = super.downloadStoryGroupings(-1);
 
       // Create a hashtable cache for quick look-up by topic id
       Hashtable<String, Program> lookup = new Hashtable<String, Program>();

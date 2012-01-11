@@ -15,7 +15,9 @@
 
 package org.npr.android.news;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -31,28 +33,18 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
+import android.widget.*;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import org.npr.android.util.DisplayUtils;
-import org.npr.android.util.FavoriteStationsProvider;
-import org.npr.android.util.Tracker;
+import org.npr.android.util.*;
 import org.npr.android.util.Tracker.StationListMeasurement;
 import org.npr.api.ApiConstants;
 import org.npr.api.Station;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class StationListActivity extends TitleActivity implements
-    OnItemClickListener, OnClickListener, View.OnKeyListener {
+    OnItemClickListener, AdapterView.OnItemLongClickListener, OnClickListener, View.OnKeyListener {
   private static final String LOG_TAG = StationListActivity.class.getName();
 
   private EditText searchTermField;
@@ -61,44 +53,26 @@ public class StationListActivity extends TitleActivity implements
   public enum Mode {
     allStations, favoriteStations, locateStations, liveStreams, nearestStations
   }
+
   private Mode mode = Mode.allStations;
 
-  private static final Map<String, Station> stationCache =
-      new HashMap<String, Station>();
   private String query;
 
-  public static Station getStationFromCache(String stationId) {
-    Station result = stationCache.get(stationId);
-    if (result == null ||
-        // Stations pulled from the live stream list don't have stream names
-        (result.getAudioStreams().size() > 0 &&
-            result.getAudioStreams().get(0).getTitle() == null) ) {
-      Station nprStation = Station.StationFactory.downloadStation(stationId);
-      if (nprStation != null) {
-        stationCache.put(stationId, nprStation);
-        result = nprStation;
-      }
-    }
-    return result;
-  }
-
-  public static void addAllToStationCache(List<Station> stations) {
-    for (Station station : stations) {
-      stationCache.put(station.getId(), station);
-    }
-  }
+  private FavoriteStationsRepository favoriteStationsRepository;
+  private int selectedPosition;
+  private final String presets[] = new String[]{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "None"};
 
   @Override
   public void onLowMemory() {
     super.onLowMemory();
     listAdapter.clear();
-    stationCache.clear();
+    StationCache.clear();
   }
 
   private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
-      if(msg.what == 0) {
+      if (msg.what == 0) {
         listAdapter.showData();
         TextView emptyText = (TextView) findViewById(R.id.Empty);
         if (listAdapter.getCount() == 0) {
@@ -134,14 +108,19 @@ public class StationListActivity extends TitleActivity implements
     ViewGroup.inflate(this, R.layout.station_list, container);
     final ListView lv = (ListView) findViewById(R.id.ListView01);
 
-    listAdapter =
-        new StationListAdapter(this
-        );
+    favoriteStationsRepository = new FavoriteStationsRepository(getContentResolver());
+    listAdapter = new StationListAdapter(this, (mode == Mode.favoriteStations));
     lv.setAdapter(listAdapter);
     lv.setOnItemClickListener(StationListActivity.this);
+    lv.setOnItemLongClickListener(StationListActivity.this);
 
     if (mode == Mode.favoriteStations) {
-      loadFromFavorites();
+      TextView presetInstructions = (TextView) findViewById(R.id.preset_instructions);
+      if (favoriteStationsRepository.getItemCount() > 0) {
+        presetInstructions.setVisibility(View.VISIBLE);
+      } else {
+        presetInstructions.setVisibility(View.GONE);
+      }
     } else {
       loadFromQuery(queryUrl);
     }
@@ -180,12 +159,11 @@ public class StationListActivity extends TitleActivity implements
   @Override
   public void onResume() {
     super.onResume();
-    SharedPreferences preferences = getSharedPreferences("StationSearch", 0);
-    searchTermField.setText(preferences.getString("lastSearch", ""));
-
     if (mode == Mode.favoriteStations) {
       loadFromFavorites();
     }
+    SharedPreferences preferences = getSharedPreferences("StationSearch", 0);
+    searchTermField.setText(preferences.getString("lastSearch", ""));
   }
 
   private void loadFromFavorites() {
@@ -205,6 +183,7 @@ public class StationListActivity extends TitleActivity implements
 
   /**
    * Loads the list adapter and the list from the provided query.
+   *
    * @param queryUrl The URL to fetch the data from.
    */
   private void loadFromQuery(String queryUrl) {
@@ -227,8 +206,7 @@ public class StationListActivity extends TitleActivity implements
    * ensure that the title is properly selected.
    *
    * @param intent The Intent the activity was started with or the intent
-   * returned to the activity as a result.
-   *
+   *               returned to the activity as a result.
    * @return The URL to fetch the list data from.
    */
   private String parseIntent(Intent intent) {
@@ -236,11 +214,11 @@ public class StationListActivity extends TitleActivity implements
     if (intent != null) {
       query = intent.getStringExtra(Constants.EXTRA_QUERY_TERM);
       queryUrl = intent.getStringExtra(Constants
-        .EXTRA_LIVE_STREAM_RSS_URL);
+          .EXTRA_LIVE_STREAM_RSS_URL);
       if (queryUrl != null) {
         mode = Mode.liveStreams;
       } else {
-        mode = (Mode)intent.getSerializableExtra(
+        mode = (Mode) intent.getSerializableExtra(
             Constants.EXTRA_STATION_LIST_MODE
         );
         if (mode == Mode.nearestStations) {
@@ -291,7 +269,7 @@ public class StationListActivity extends TitleActivity implements
 
       StringBuilder builder = new StringBuilder(parts[0]);
       for (int i = 1, length = parts.length; i < length - 1; i++) {
-          builder.append(" ").append(parts[i]);
+        builder.append(" ").append(parts[i]);
       }
       String city = builder.toString();
       params.put(ApiConstants.PARAM_CITY, city);
@@ -334,14 +312,62 @@ public class StationListActivity extends TitleActivity implements
 
   @Override
   public void onItemClick(AdapterView<?> parent, View view, int position,
-      long id) {
+                          long id) {
     Station station = (Station) parent.getItemAtPosition(position);
 
     Intent i =
-      new Intent(this, StationDetailsActivity.class).putExtra(
-          Constants.EXTRA_STATION_ID, station.getId());
+        new Intent(this, StationDetailsActivity.class).putExtra(
+            Constants.EXTRA_STATION_ID, station.getId());
 
     startActivityWithoutAnimation(i);
+  }
+
+  private void removePreset() {
+    Station station = listAdapter.getItem(selectedPosition);
+    favoriteStationsRepository.removePreset(station.getId());
+    listAdapter.notifyDataSetChanged();
+  }
+
+  private void setPreset(int presetNumberSelected) {
+    favoriteStationsRepository.setPreset(
+        listAdapter.getItem(selectedPosition), Integer.toString(presetNumberSelected + 1));
+    listAdapter.notifyDataSetChanged();
+  }
+
+  @Override
+  public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+
+    if (mode != Mode.favoriteStations) {
+      return false;
+    }
+    selectedPosition = position;
+
+    int presetNumber = 10;
+    FavoriteStationEntry favoriteStationEntry =
+        favoriteStationsRepository.getFavoriteStationForStationId(
+            listAdapter.getItem(position).getId());
+    if (favoriteStationEntry != null &&
+        favoriteStationEntry.preset != null &&
+        favoriteStationEntry.preset.length() > 0) {
+      presetNumber = Integer.parseInt(favoriteStationEntry.preset) - 1;
+    }
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    builder.setTitle("Pick a preset");
+    builder.setSingleChoiceItems(presets, presetNumber, new DialogInterface.OnClickListener() {
+      public void onClick(DialogInterface dialog, int item) {
+        if (item == 10) {
+          removePreset();
+        } else {
+          setPreset(item);
+        }
+        dialog.dismiss();
+      }
+    });
+
+    AlertDialog alert = builder.create();
+    alert.show();
+
+    return true;
   }
 
   private String populateLocalStationParams(Map<String, String> params) {
@@ -376,7 +402,6 @@ public class StationListActivity extends TitleActivity implements
 
     return query;
   }
-
 
   @Override
   public CharSequence getMainTitle() {
@@ -417,6 +442,7 @@ public class StationListActivity extends TitleActivity implements
     }
     return getString(helpId);
   }
+
   @Override
   public void trackNow() {
     if (query == null) {

@@ -7,39 +7,48 @@
   android:paddingRight="10dp"
   android:minHeight="?android:attr/listPreferredItemHeight"
   android:orientation="horizontal">
-  <TextView
-    android:id="@+id/StationItemNameText"
-    android:layout_height="wrap_content"
-    android:layout_width="90dp"
-    android:layout_gravity="center_vertical"
-    android:textAppearance="?android:attr/textAppearanceLarge"/>
-  <TextView
-    android:id="@+id/StationItemLocationText"
-    android:paddingLeft="5dip"
-    android:layout_height="wrap_content"
+  <LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
-    android:layout_gravity="center_vertical"
+    android:layout_height="fill_parent"
     android:layout_weight="1"
-    android:textAppearance="?android:attr/textAppearanceSmall"/>
+    android:gravity="center_vertical"
+    android:orientation="vertical">
+    <TextView
+      android:id="@+id/StationItemNameText"
+      android:layout_height="wrap_content"
+      android:layout_width="90dp"
+      android:textAppearance="?android:attr/textAppearanceLarge"/>
+    <TextView
+      android:id="@+id/StationItemLocationText"
+      android:paddingLeft="5dip"
+      android:layout_height="wrap_content"
+      android:layout_width="wrap_content"
+      android:textAppearance="?android:attr/textAppearanceSmall"/>
+  </LinearLayout>
   <TextView
-    android:id="@+id/StationItemFrequencyText"
-    android:paddingLeft="5dip"
+    android:id="@+id/StationPresetView"
+    android:paddingLeft="10dip"
+    android:paddingRight="10dip"
+    android:paddingTop="5dip"
+    android:paddingBottom="5dip"
     android:layout_height="wrap_content"
     android:layout_width="wrap_content"
-    android:layout_gravity="center_vertical"
-    android:textAppearance="@style/StationFrequencyText"/>
-  <ImageView
-    android:id="@+id/StationItemPlayableImage"
-    android:layout_width="27dip"
-    android:layout_height="22dip"
-    android:src="@drawable/speaker_icon"
-    android:layout_marginLeft="5dip"
-    android:layout_gravity="center_vertical"
-    android:scaleType="centerInside"/>
-  <ImageView
-    android:id="@+id/StationItemPlaceholderImage"
-    android:layout_width="27dip"
-    android:layout_height="33dip"
-    android:layout_marginLeft="5dip"
-    android:layout_gravity="center_vertical"/>
+    android:visibility="invisible"
+    android:background="@drawable/preset"/>
+  <LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="fill_parent"
+    android:layout_weight="1"
+    android:gravity="right"
+    android:orientation="horizontal">
+    <TextView
+      android:id="@+id/StationItemFrequencyText"
+      android:paddingLeft="5dip"
+      android:layout_height="wrap_content"
+      android:layout_width="wrap_content"
+      android:layout_gravity="center_vertical"
+      android:textAppearance="@style/StationFrequencyText"/>
+  </LinearLayout>
 </LinearLayout>

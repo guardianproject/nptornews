@@ -28,16 +28,11 @@ import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
-import android.os.Build;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
+import android.media.MediaPlayer.OnSeekCompleteListener;
+import android.os.*;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import org.npr.android.util.M3uParser;
 import org.npr.android.util.PlaylistParser;
@@ -49,21 +44,26 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.UnknownHostException;
+import java.sql.Connection;
 import java.util.List;
 
 public class PlaybackService extends Service implements
-    OnPreparedListener,
+    OnPreparedListener, OnSeekCompleteListener,
     OnBufferingUpdateListener, OnCompletionListener, OnErrorListener,
     OnInfoListener {
 
   private static final String LOG_TAG = PlaybackService.class.getName();
 
   private static final String SERVICE_PREFIX = "org.npr.android.news.";
+
   public static final String SERVICE_CHANGE_NAME = SERVICE_PREFIX + "CHANGE";
   public static final String SERVICE_CLOSE_NAME = SERVICE_PREFIX + "CLOSE";
   public static final String SERVICE_UPDATE_NAME = SERVICE_PREFIX + "UPDATE";
+  public static final String SERVICE_ERROR_NAME = SERVICE_PREFIX + "ERROR";
 
   public static final String SERVICE_PLAY_SINGLE = SERVICE_PREFIX +
       "PLAY_SINGLE";
@@ -71,10 +71,12 @@ public class PlaybackService extends Service implements
   public static final String SERVICE_TOGGLE_PLAY = SERVICE_PREFIX +
       "TOGGLE_PLAY";
   public static final String SERVICE_BACK_30 = SERVICE_PREFIX + "BACK_30";
+  public static final String SERVICE_FORWARD_30 = SERVICE_PREFIX + "FORWARD_30";
   public static final String SERVICE_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
   public static final String SERVICE_PLAY_NEXT = SERVICE_PREFIX + "PLAYNEXT";
   public static final String SERVICE_PLAY_PREVIOUS = SERVICE_PREFIX +
       "PLAYPREVIOUS";
+  public static final String SERVICE_STOP_PLAYBACK = SERVICE_PREFIX + "STOP_PLAYBACK";
   public static final String SERVICE_STATUS = SERVICE_PREFIX + "STATUS";
   public static final String SERVICE_CLEAR_PLAYER = SERVICE_PREFIX +
       "CLEAR_PLAYER";
@@ -86,6 +88,10 @@ public class PlaybackService extends Service implements
   public static final String EXTRA_POSITION = SERVICE_PREFIX + "POSITION";
   public static final String EXTRA_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
   public static final String EXTRA_IS_PLAYING = SERVICE_PREFIX + "IS_PLAYING";
+  public static final String EXTRA_IS_PREPARED = SERVICE_PREFIX + "IS_PREPARED";
+
+  public static final String EXTRA_ERROR = SERVICE_PREFIX + "ERROR";
+  public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback}
 
   private MediaPlayer mediaPlayer;
   private boolean isPrepared = false;
@@ -103,7 +109,11 @@ public class PlaybackService extends Service implements
   private String currentAction;
   private Playable current = null;
   private List<String> playlistUrls;
-  private int errorCt;
+
+  // Error handling
+  private int errorCount;
+  private int connectionErrorWaitTime;
+  private int seekToPosition;
 
   private TelephonyManager telephonyManager;
   private PhoneStateListener listener;
@@ -116,6 +126,7 @@ public class PlaybackService extends Service implements
   // Amount of time to rewind playback when resuming after call 
   private final static int RESUME_REWIND_TIME = 3000;
   private final static int ERROR_RETRY_COUNT = 3;
+  private final static int RETRY_SLEEP_TIME = 30000;
 
   private Looper serviceLooper;
   private ServiceHandler serviceHandler;
@@ -142,6 +153,7 @@ public class PlaybackService extends Service implements
     mediaPlayer.setOnErrorListener(this);
     mediaPlayer.setOnInfoListener(this);
     mediaPlayer.setOnPreparedListener(this);
+    mediaPlayer.setOnSeekCompleteListener(this);
     notificationManager = (NotificationManager) getSystemService(
         Context.NOTIFICATION_SERVICE);
     playlist = new PlaylistRepository(getApplicationContext(),
@@ -200,7 +212,8 @@ public class PlaybackService extends Service implements
     if (action.equals(SERVICE_PLAY_SINGLE) || action.equals(SERVICE_PLAY_ENTRY)) {
       currentAction = action;
       current = intent.getParcelableExtra(Playable.PLAYABLE_TYPE);
-      playCurrent(0);
+      seekToPosition = intent.getIntExtra(EXTRA_SEEK_TO, 0);
+      playCurrent(0, 1);
     } else if (action.equals(SERVICE_TOGGLE_PLAY)) {
       if (isPlaying()) {
         pause();
@@ -213,21 +226,25 @@ public class PlaybackService extends Service implements
         if (isPrepared) {
           play();
         } else {
-          playCurrent(0);
+          playCurrent(0, 1);
         }
       } else {
         currentAction = SERVICE_PLAY_ENTRY;
-        errorCt = 0;
+        errorCount = 0;
         playFirstUnreadEntry();
       }
     } else if (action.equals(SERVICE_BACK_30)) {
       seekRelative(-30000);
+    } else if (action.equals(SERVICE_FORWARD_30)) {
+      seekRelative(30000);
     } else if (action.equals(SERVICE_SEEK_TO)) {
       seekTo(intent.getIntExtra(EXTRA_SEEK_TO, 0));
     } else if (action.equals(SERVICE_PLAY_NEXT)) {
       playNextEntry();
     } else if (action.equals(SERVICE_PLAY_PREVIOUS)) {
       playPreviousEntry();
+    } else if (action.equals(SERVICE_STOP_PLAYBACK)) {
+      stopSelfResult(startId);
     } else if (action.equals(SERVICE_STATUS)) {
       updateProgress();
     } else if (action.equals(SERVICE_CLEAR_PLAYER)) {
@@ -243,20 +260,22 @@ public class PlaybackService extends Service implements
     return null;
   }
 
-  private boolean playCurrent(int startingErrorCount) {
-    errorCt = startingErrorCount;
-    while (errorCt < ERROR_RETRY_COUNT) {
+  private boolean playCurrent(int startingErrorCount, int startingWaitTime) {
+    errorCount = startingErrorCount;
+    connectionErrorWaitTime = startingWaitTime;
+    while (errorCount < ERROR_RETRY_COUNT) {
       try {
         prepareThenPlay(current.getUrl(), current.isStream());
         return true;
+      } catch (UnknownHostException e) {
+        Log.w(LOG_TAG, "Unknown host in playCurrent");
+        handleConnectionError();
+      } catch (ConnectException e) {
+        Log.w(LOG_TAG, "Connect exception in playCurrent");
+        handleConnectionError();
       } catch (IOException e) {
         Log.e(LOG_TAG, "IOException on playlist entry " + current.getId(), e);
-        errorCt++;
-        if (errorCt >= ERROR_RETRY_COUNT) {
-          Toast.makeText(getApplicationContext(),
-              getResources().getString(R.string.msg_playback_error),
-              Toast.LENGTH_LONG).show();
-        }
+        incrementErrorCount();
       }
     }
 
@@ -271,19 +290,19 @@ public class PlaybackService extends Service implements
       } else {
         current = playlist.getFirstUnreadEntry();
       }
-    } while (current != null && !playCurrent(0));
+    } while (current != null && !playCurrent(0, 1));
   }
 
   private void playPreviousEntry() {
     do {
       current = playlist.getPreviousEntry(current.getId());
-    } while (current != null && !playCurrent(0));
+    } while (current != null && !playCurrent(0, 1));
   }
 
   private void playFirstUnreadEntry() {
     do {
       current = playlist.getFirstUnreadEntry();
-    } while (current != null && !playCurrent(0));
+    } while (current != null && !playCurrent(0, 1));
 
     if (current == null) {
       stopSelfResult(startId);
@@ -297,7 +316,7 @@ public class PlaybackService extends Service implements
 
     do {
       current = playlist.getNextEntry(current.getId());
-    } while (current != null && !playCurrent(0));
+    } while (current != null && !playCurrent(0, 1));
 
     if (current == null) {
       stopSelfResult(startId);
@@ -317,12 +336,14 @@ public class PlaybackService extends Service implements
 
   synchronized private void seekRelative(int pos) {
     if (isPrepared) {
+      seekToPosition = 0;
       mediaPlayer.seekTo(mediaPlayer.getCurrentPosition() + pos);
     }
   }
 
   synchronized private void seekTo(int pos) {
     if (isPrepared) {
+      seekToPosition = 0;
       mediaPlayer.seekTo(pos);
     }
   }
@@ -362,7 +383,9 @@ public class PlaybackService extends Service implements
           proxy.getPort(), url);
     }
 
-    markedRead = false;
+    // We only have to mark an item read on playlist items,
+    // so set markedRead to false only when a playlist entry
+    markedRead = !currentAction.equals(SERVICE_PLAY_ENTRY);
     synchronized (this) {
       Log.d(LOG_TAG, "reset: " + playUrl);
       mediaPlayer.reset();
@@ -380,16 +403,18 @@ public class PlaybackService extends Service implements
       return;
     }
     Log.d(LOG_TAG, "play " + current.getId());
+
     mediaPlayer.start();
     mediaPlayerHasStarted = true;
 
-    int icon = R.drawable.stat_notify_musicplayer;
     CharSequence contentText = current.getTitle();
-    long when = System.currentTimeMillis();
-    Notification notification = new Notification(icon, contentText, when);
+    Notification notification =
+        new Notification(R.drawable.stat_notify_musicplayer,
+            contentText,
+            System.currentTimeMillis());
     notification.flags = Notification.FLAG_NO_CLEAR
         | Notification.FLAG_ONGOING_EVENT;
-    Context c = getApplicationContext();
+    Context context = getApplicationContext();
     CharSequence title = getString(R.string.app_name);
     Intent notificationIntent;
     if (current.getActivityData() != null) {
@@ -404,9 +429,9 @@ public class PlaybackService extends Service implements
     notificationIntent.setAction(Intent.ACTION_VIEW);
     notificationIntent.addCategory(Intent.CATEGORY_DEFAULT);
     notificationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-    PendingIntent contentIntent = PendingIntent.getActivity(c, 0,
+    PendingIntent contentIntent = PendingIntent.getActivity(context, 0,
         notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-    notification.setLatestEventInfo(c, title, contentText, contentIntent);
+    notification.setLatestEventInfo(context, title, contentText, contentIntent);
     notificationManager.notify(NOTIFICATION_ID, notification);
 
     // Change broadcasts are sticky, so when a new receiver connects, it will
@@ -458,17 +483,28 @@ public class PlaybackService extends Service implements
         isPrepared = true;
       }
     }
-    play();
 
+    if (seekToPosition > 0) {
+      Log.d(LOG_TAG, "Seeking to starting position: " + seekToPosition);
+      mp.seekTo(seekToPosition);
+    } else {
+      startPlaying();
+    }
+  }
+
+  @Override
+  public void onSeekComplete(MediaPlayer mp) {
+    Log.d(LOG_TAG, "Seek complete");
+    if (seekToPosition > 0) {
+      seekToPosition = 0;
+      startPlaying();
+    }
+  }
+
+  private void startPlaying() {
+    play();
     updateProgressThread = new Thread(new Runnable() {
       public void run() {
-        // Initially, don't send any updates, since it takes a while for the
-        // media player to settle down. 
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException e) {
-          return;
-        }
         while (true) {
           updateProgress();
           try {
@@ -492,7 +528,7 @@ public class PlaybackService extends Service implements
     if (updateProgressThread != null) {
       updateProgressThread.interrupt();
       try {
-        updateProgressThread.join(3000);
+        updateProgressThread.join(1000);
       } catch (InterruptedException e) {
         Log.e(LOG_TAG, "", e);
       }
@@ -508,6 +544,7 @@ public class PlaybackService extends Service implements
           mediaPlayer.setOnErrorListener(null);
           mediaPlayer.setOnInfoListener(null);
           mediaPlayer.setOnPreparedListener(null);
+          mediaPlayer.setOnSeekCompleteListener(null);
         }
         mediaPlayer = null;
       }
@@ -536,16 +573,22 @@ public class PlaybackService extends Service implements
    * Sends an UPDATE broadcast with the latest info.
    */
   private void updateProgress() {
-    if (lastUpdateBroadcast != null) {
-      getApplicationContext().removeStickyBroadcast(lastUpdateBroadcast);
-    }
 
-    if (mediaPlayer != null && isPrepared) {
+    // Stop updating after mediaplayer is released
+    if (mediaPlayer == null)
+      return;
 
-      int duration = mediaPlayer.getDuration(),
-          position = mediaPlayer.getCurrentPosition();
+    if (isPrepared) {
+
+      if (lastUpdateBroadcast != null) {
+        getApplicationContext().removeStickyBroadcast(lastUpdateBroadcast);
+        lastUpdateBroadcast = null;
+      }
+
+      int duration = mediaPlayer.getDuration();
+      seekToPosition = mediaPlayer.getCurrentPosition();
       if (!markedRead) {
-        if (position > duration / 10) {
+        if (seekToPosition > duration / 10) {
           markedRead = true;
           playlist.markAsRead(current.getId());
         }
@@ -555,16 +598,19 @@ public class PlaybackService extends Service implements
       tempUpdateBroadcast.putExtra(EXTRA_DURATION, duration);
       tempUpdateBroadcast.putExtra(EXTRA_DOWNLOADED,
           (int) ((lastBufferPercent / 100.0) * duration));
-      tempUpdateBroadcast.putExtra(EXTRA_POSITION, position);
+      tempUpdateBroadcast.putExtra(EXTRA_POSITION, seekToPosition);
       tempUpdateBroadcast.putExtra(EXTRA_IS_PLAYING, mediaPlayer.isPlaying());
+      tempUpdateBroadcast.putExtra(EXTRA_IS_PREPARED, isPrepared);
 
       // Update broadcasts while playing are not sticky, due to concurrency
       // issues.  These fire very often, so this shouldn't be a problem.
       getApplicationContext().sendBroadcast(tempUpdateBroadcast);
     } else {
-      lastUpdateBroadcast = new Intent(SERVICE_UPDATE_NAME);
-      lastUpdateBroadcast.putExtra(EXTRA_IS_PLAYING, false);
-      getApplicationContext().sendStickyBroadcast(lastUpdateBroadcast);
+      if (lastUpdateBroadcast == null) {
+        lastUpdateBroadcast = new Intent(SERVICE_UPDATE_NAME);
+        lastUpdateBroadcast.putExtra(EXTRA_IS_PLAYING, false);
+        getApplicationContext().sendStickyBroadcast(lastUpdateBroadcast);
+      }
     }
   }
 
@@ -590,28 +636,28 @@ public class PlaybackService extends Service implements
       boolean successfulPlay = false;
       while (!successfulPlay && playlistUrls.size() > 0) {
         String url = playlistUrls.remove(0);
-        errorCt = 0;
-        while (errorCt < ERROR_RETRY_COUNT) {
+        errorCount = 0;
+        while (errorCount < ERROR_RETRY_COUNT) {
           try {
             prepareThenPlay(url, current.isStream());
             successfulPlay = true;
             break;
+          } catch (UnknownHostException e) {
+            Log.w(LOG_TAG, "Unknown host in onCompletion");
+            handleConnectionError();
+          } catch (ConnectException e) {
+            Log.w(LOG_TAG, "Connect exception in onCompletion");
+            handleConnectionError();
           } catch (IllegalArgumentException e) {
             Log.e(LOG_TAG, "", e);
-            errorCt++;
+            incrementErrorCount();
           } catch (IllegalStateException e) {
             Log.e(LOG_TAG, "", e);
-            errorCt++;
+            incrementErrorCount();
           } catch (IOException e) {
             Log.e(LOG_TAG, "", e);
-            errorCt++;
+            incrementErrorCount();
           }
-        }
-
-        if (errorCt >= ERROR_RETRY_COUNT) {
-          Toast.makeText(getApplicationContext(),
-              getResources().getString(R.string.msg_playback_error),
-              Toast.LENGTH_LONG).show();
         }
       }
     }
@@ -621,6 +667,42 @@ public class PlaybackService extends Service implements
     } else {
       stopSelfResult(startId);
     }
+  }
+
+  private void incrementErrorCount() {
+    errorCount++;
+    Log.e(LOG_TAG, "Media player increment error count:" + errorCount);
+    if (errorCount >= ERROR_RETRY_COUNT) {
+      Intent intent = new Intent(SERVICE_ERROR_NAME);
+      intent.putExtra(EXTRA_ERROR, PLAYBACK_SERVICE_ERROR.Playback.ordinal());
+      getApplicationContext().sendBroadcast(intent);
+    }
+  }
+
+  private void handleConnectionError() {
+    connectionErrorWaitTime *= 5;
+    if (connectionErrorWaitTime > RETRY_SLEEP_TIME) {
+      Log.e(LOG_TAG, "Connection failed.  Resetting mediaPlayer" +
+          " and trying again in 30 seconds.");
+
+      Intent intent = new Intent(SERVICE_ERROR_NAME);
+      intent.putExtra(EXTRA_ERROR, PLAYBACK_SERVICE_ERROR.Connection.ordinal());
+      getApplicationContext().sendBroadcast(intent);
+
+      // If a stream, increment since it could be bad
+      if (current.isStream()) {
+        errorCount++;
+      }
+
+      connectionErrorWaitTime = RETRY_SLEEP_TIME;
+      // Send error notification and keep waiting
+      isPrepared = false;
+      mediaPlayer.reset();
+    } else {
+      Log.w(LOG_TAG, "Connection error. Waiting for " +
+          connectionErrorWaitTime + " milliseconds.");
+    }
+    SystemClock.sleep(connectionErrorWaitTime);
   }
 
   @Override
@@ -634,14 +716,11 @@ public class PlaybackService extends Service implements
       }
     }
     isPrepared = false;
-    if (mediaPlayerHasStarted) {
-      mediaPlayer.reset();
-    }
+    mediaPlayer.reset();
 
-    Log.e(LOG_TAG, "Media player onError, ct:" + errorCt);
-    errorCt++;
-    if (errorCt < ERROR_RETRY_COUNT) {
-      playCurrent(errorCt);
+    incrementErrorCount();
+    if (errorCount < ERROR_RETRY_COUNT) {
+      playCurrent(errorCount, 1);
       // Returning true means we handled the error, false causes the
       // onCompletion handler to be called
       return true;
@@ -657,7 +736,7 @@ public class PlaybackService extends Service implements
   }
 
   private boolean isPlaylist(String url) {
-    return url.indexOf("m3u") > -1 || url.indexOf("pls") > -1;
+    return url.contains("m3u") || url.contains("pls");
   }
 
   private boolean downloadPlaylist(String url) throws IOException {
@@ -681,9 +760,9 @@ public class PlaybackService extends Service implements
     stream.close();
     out.close();
     PlaylistParser parser;
-    if (url.indexOf("m3u") > -1) {
+    if (url.contains("m3u")) {
       parser = new M3uParser(downloadingMediaFile);
-    } else if (url.indexOf("pls") > -1) {
+    } else if (url.contains("pls")) {
       parser = new PlsParser(downloadingMediaFile);
     } else {
       return false;

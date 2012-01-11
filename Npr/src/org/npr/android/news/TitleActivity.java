@@ -14,17 +14,20 @@
 
 package org.npr.android.news;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 public abstract class TitleActivity extends RootActivity {
   private static final String LOG_TAG = TitleActivity.class.getName();
+  public static final String APP_RESUME = "org.npr.android.APP_RESUME";
 
   /**
    * Implementing classes must override this method to provide a title that
    * will be shown in the title bar.
-   *
+   * <p/>
    * Note that the title is read in the onCreate so subclasses must be
    * able to generate the title in this method entirely from data available
    * at the time it is called. This could mean that subclasses' onCreate
@@ -61,4 +64,9 @@ public abstract class TitleActivity extends RootActivity {
 
   }
 
+  @Override
+  protected void onResume() {
+    super.onResume();
+    sendBroadcast(new Intent(APP_RESUME));
+  }
 }

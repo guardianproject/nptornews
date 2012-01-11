@@ -328,7 +328,7 @@ public class AllProgramsActivity extends TitleActivity implements
     } else if (id.equals("35") || id.equals("18")) {
       return 1; // Arts & Life
     } else if (id.equals("37") || id.equals("20") || id.equals("24")
-        || id.equals("39") || id.equals("36")) {
+        || id.equals("39")) {
       return 2; // Music
     } else if (id.equals("")) {
       return 3; // Special Series
@@ -388,7 +388,6 @@ public class AllProgramsActivity extends TitleActivity implements
       "Song of the Day",
       "Thistle & Shamrock",
       "World Cafe",
-      "World of Opera",
       "StoryCorps",
       "Planet Money",
       "Picture Show",

@@ -99,6 +99,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private BroadcastReceiver changeReceiver;
   private BroadcastReceiver updateReceiver;
   private BroadcastReceiver closeReceiver;
+  private BroadcastReceiver errorReceiver;
   private BroadcastReceiver playlistChangedReceiver;
 
   private GestureDetector gestureDetector;
@@ -241,6 +242,9 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     closeReceiver = new PlaybackCloseReceiver();
     context.registerReceiver(closeReceiver,
         new IntentFilter(PlaybackService.SERVICE_CLOSE_NAME));
+    errorReceiver = new PlaybackErrorReceiver();
+    context.registerReceiver(errorReceiver,
+        new IntentFilter(PlaybackService.SERVICE_ERROR_NAME));
 
     playlistChangedReceiver = new PlaylistChangedReceiver();
     context.registerReceiver(playlistChangedReceiver,
@@ -291,6 +295,10 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     if (closeReceiver != null) {
       context.unregisterReceiver(closeReceiver);
       closeReceiver = null;
+    }
+    if (errorReceiver != null) {
+      context.unregisterReceiver(errorReceiver);
+      errorReceiver = null;
     }
     if (playlistChangedReceiver != null) {
       context.unregisterReceiver(playlistChangedReceiver);
@@ -488,6 +496,22 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
       Log.d(LOG_TAG, "Playback close received - calling clear player");
       clearPlayer();
       refreshList();
+    }
+  }
+
+  private class PlaybackErrorReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      Log.d(LOG_TAG, "Playback error received - toasting message");
+      String message = "Unknown error occurred.";
+
+      int error = intent.getIntExtra(PlaybackService.EXTRA_ERROR, -1);
+      if (error == PlaybackService.PLAYBACK_SERVICE_ERROR.Playback.ordinal()) {
+        message = context.getString(R.string.msg_playback_error);
+      } else if (error == PlaybackService.PLAYBACK_SERVICE_ERROR.Connection.ordinal()) {
+        message = context.getString(R.string.connection_error);
+      }
+      Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }
   }
 

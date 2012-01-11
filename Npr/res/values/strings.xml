@@ -31,6 +31,8 @@
 
   <string name="msg_playback_error">Unable to play media. Moving to the
     next item.</string>
+  <string name="msg_playback_connection_error">Connection error.  Retrying
+    in 30 seconds.</string>
   <string name="msg_check_connection">Check connection and try again.</string>
 
   <string name="msg_share_story">Share this story</string>
@@ -134,6 +136,7 @@
   <string name="msg_station_search_help">Couldn\'t determine what you
     are looking for. Try searching for call letter (e.g. WAMU),
     zip code (e.g. 90210) or city and state (e.g. San Francisco, CA).</string>
+  <string name="msg_preset_instructions">Press and hold to assign car presets</string>
 
 
   <string name="msg_hourly_news_title">Hourly Newscast</string>

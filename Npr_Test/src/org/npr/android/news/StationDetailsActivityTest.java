@@ -17,6 +17,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.test.ActivityInstrumentationTestCase2;
 
+import org.npr.android.util.StationCache;
 import org.npr.api.Station;
 import org.npr.api.Station.AudioStream;
 import org.npr.api.Station.Podcast;
@@ -44,7 +45,7 @@ public class StationDetailsActivityTest extends
         .build();
     ArrayList<Station> list = new ArrayList<Station>();
     list.add(station);
-    StationListActivity.addAllToStationCache(list);
+    StationCache.addAll(list);
     Intent intent = new Intent().putExtra(Constants.EXTRA_STATION_ID, "0");
     setActivityIntent(intent);
     Activity activity = getActivity();
@@ -69,7 +70,7 @@ public class StationDetailsActivityTest extends
 
     ArrayList<Station> list = new ArrayList<Station>();
     list.add(station);
-    StationListActivity.addAllToStationCache(list);
+    StationCache.addAll(list);
     Intent intent = new Intent().putExtra(Constants.EXTRA_STATION_ID, "0");
     setActivityIntent(intent);
     Activity activity = getActivity();
@@ -94,7 +95,7 @@ public class StationDetailsActivityTest extends
 
     ArrayList<Station> list = new ArrayList<Station>();
     list.add(station);
-    StationListActivity.addAllToStationCache(list);
+    StationCache.addAll(list);
     Intent intent = new Intent().putExtra(Constants.EXTRA_STATION_ID, "0");
     setActivityIntent(intent);
     Activity activity = getActivity();

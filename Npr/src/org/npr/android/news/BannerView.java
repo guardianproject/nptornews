@@ -179,7 +179,7 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
 
   void init() {
     Cursor cursor = context.getContentResolver().query(IPhoneTimersConfProvider.CONTENT_URL, null, null, null, null);
-    while (cursor.moveToNext()) {
+    while (cursor != null && cursor.moveToNext()) {
       String id = cursor.getString(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.NAME));
       if (id.equals("banners")) {
         noBannerTimeIncrement = cursor.getInt(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.TIMER_LENGTH)) * 1000;

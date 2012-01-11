@@ -19,7 +19,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -38,6 +37,7 @@ import android.widget.TextView;
 import org.npr.android.util.*;
 import org.npr.android.util.Tracker.StoryListMeasurement;
 import org.npr.api.ApiConstants;
+import org.npr.api.Book;
 import org.npr.api.Story;
 
 import java.util.HashMap;
@@ -55,9 +55,11 @@ public class NewsListActivity extends TitleActivity implements
 
   protected NewsListAdapter listAdapter;
   private ListView listView;
-  private BannerView bannerView;
+  protected BannerView bannerView;
 
   private static final Map<String, Story> storyCache = new HashMap<String, Story>();
+  private static final Map<String, List<Book>> bookCache =
+      new HashMap<String, List<Book>>();
 
   private GestureDetector gestureDetector;
   private Story flungStory;
@@ -75,7 +77,7 @@ public class NewsListActivity extends TitleActivity implements
       switch (msg.what) {
         case ListItemGestureListener.MSG_LONG_PRESS: {
 
-            lastLongPressPosition = msg.arg1;
+          lastLongPressPosition = msg.arg1;
 
           Story longPressStory = listAdapter.getItem(msg.arg1);
           if (longPressStory != null && longPressStory.getPlayable() != null) {
@@ -105,7 +107,7 @@ public class NewsListActivity extends TitleActivity implements
 
         case ListItemGestureListener.MSG_FLING: {
 
-            flungStory = listAdapter.getItem(msg.arg1);
+          flungStory = listAdapter.getItem(msg.arg1);
           if (flungStory != null && flungStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
@@ -149,6 +151,14 @@ public class NewsListActivity extends TitleActivity implements
     for (Story story : stories) {
       storyCache.put(story.getId(), story);
     }
+  }
+
+  public static List<Book> getBooksFromCache(String storyId) {
+    return bookCache.get(storyId);
+  }
+
+  public static void addBooksToCache(String storyId, List<Book> books) {
+    bookCache.put(storyId, books);
   }
 
   @Override
@@ -259,8 +269,8 @@ public class NewsListActivity extends TitleActivity implements
       );
       i.putExtra(Constants.EXTRA_STORY_ID, s.getId());
       if (getIntent().hasExtra(Constants.EXTRA_TEASER_ONLY)) {
-          i.putExtra(Constants.EXTRA_TEASER_ONLY,
-                  getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false));
+        i.putExtra(Constants.EXTRA_TEASER_ONLY,
+            getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false));
       }
       startActivityWithoutAnimation(i);
     }
