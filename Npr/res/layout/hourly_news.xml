@@ -58,7 +58,7 @@
       android:layout_gravity="center_horizontal"
       android:layout_margin="15dip"
       android:gravity="center"
-      android:drawableLeft="@drawable/speaker"
+      android:drawableLeft="@drawable/speaker_icon"
       android:text="@string/msg_listen_now"
       android:background="@drawable/story_button_background"/>
   </LinearLayout>

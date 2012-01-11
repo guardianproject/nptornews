@@ -36,6 +36,19 @@ public abstract class TitleActivity extends RootActivity {
    */
   protected abstract CharSequence getMainTitle();
 
+  /**
+   * This allows implementing classes to set text that appears
+   * on the right side of the title bar.
+   *
+   * @param rightText The text to render on the right of the title bar
+   */
+  protected void setTitleRight(CharSequence rightText) {
+    if (rightText != null && rightText.length() > 0) {
+      TextView titleRight = (TextView) findViewById(R.id.TitleRight);
+      titleRight.setText(rightText);
+    }
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);

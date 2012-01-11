@@ -70,6 +70,10 @@ public class Story extends ApiElement {
     public Thumbnail(String medium) {
       this.medium = medium;
     }
+
+    public String getMedium() {
+      return medium;
+    }
   }
 
   public static class Toenail {
@@ -283,6 +287,10 @@ public class Story extends ApiElement {
 
     public boolean isPrimary() {
       return isPrimary;
+    }
+
+    public String getTitle() {
+      return title;
     }
   }
 
@@ -697,6 +705,8 @@ public class Story extends ApiElement {
             sb.withTeaser(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("miniTeaser")) {
             sb.withMiniTeaser(NodeUtils.getTextContent(n));
+          } else if (nodeName.equals("slug")) {
+            sb.withSlug(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("storyDate")) {
             sb.withStoryDate(NodeUtils.getTextContent(n));
           } else if (nodeName.equals("pubDate")) {

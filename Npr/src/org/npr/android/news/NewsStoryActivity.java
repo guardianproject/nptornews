@@ -15,8 +15,10 @@
 
 package org.npr.android.news;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Html;
@@ -68,12 +70,16 @@ public class NewsStoryActivity extends RootActivity implements
   private TrackerItem trackerItem = null;
   private List<Story> stories;
   private boolean externalStorageAvailable = false;
-
+  private PlaylistRepository playlistRepository;
+  private BroadcastReceiver playlistChangedReceiver;
+  private BroadcastReceiver playbackChangedReceiver;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     stories = new ArrayList<Story>();
+    playlistRepository = new
+        PlaylistRepository(getApplicationContext(), getContentResolver());
 
     final String storyIdsString = getIntent().getStringExtra(Constants.EXTRA_STORY_ID_LIST);
     Log.d(LOG_TAG, "Got the following id's: " + storyIdsString);
@@ -108,13 +114,13 @@ public class NewsStoryActivity extends RootActivity implements
     );
     layout.setMargins(0, 0, 0, DisplayUtils.convertToDIP(this, 95));
     ((ViewGroup) findViewById(R.id.TitleContent)).addView(workspace, layout);
-
+    boolean teaserOnly = getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false);
 
     for (int i = 0; i < storyIds.length; i++) {
       String storyId = storyIds[i];
       Story story = NewsListActivity.getStoryFromCache(storyId);
       stories.add(story);
-      layoutStory(story, i, storyIds.length);
+      layoutStory(story, i, storyIds.length, teaserOnly);
       if (storyId.equals(currentStoryId)) {
         trackerItem = new TrackerItem();
         workspace.setCurrentScreen(i);
@@ -133,10 +139,34 @@ public class NewsStoryActivity extends RootActivity implements
       }
     }
 
+    playlistChangedReceiver = new PlaylistChangedReceiver();
+    this.registerReceiver(playlistChangedReceiver,
+        new IntentFilter(PlaylistRepository.PLAYLIST_CHANGED));
+
+    playbackChangedReceiver = new PlaybackChangedReceiver();
+    Intent intent = this.registerReceiver(playbackChangedReceiver,
+        new IntentFilter(PlaybackService.SERVICE_CHANGE_NAME));
+    if (intent != null) {
+      playbackChangedReceiver.onReceive(this, intent);
+    }
+
     workspace.setOnScreenChangeListener(this);
   }
 
-  private void layoutStory(Story story, int position, int total) {
+  @Override
+  protected void onStop() {
+    if (playlistChangedReceiver != null) {
+      unregisterReceiver(playlistChangedReceiver);
+      playlistChangedReceiver = null;
+    }
+    if (playbackChangedReceiver != null) {
+      unregisterReceiver(playbackChangedReceiver);
+      playbackChangedReceiver = null;
+    }
+    super.onStop();
+  }
+
+  private void layoutStory(Story story, int position, int total, boolean teaserOnly) {
     if (position >= stories.size()) {
       Log.e(LOG_TAG, "Attempt to get story view for position " + position +
           " beyond loaded stories");
@@ -221,7 +251,7 @@ public class NewsStoryActivity extends RootActivity implements
 
     TextWithHtml text = story.getTextWithHtml();
     String textHtml;
-    if (text != null) {
+    if (!teaserOnly && text != null) {
       StringBuilder sb = new StringBuilder();
       for (String paragraph : text.getParagraphs()) {
         sb.append("<p>").append(paragraph).append("</p>");
@@ -260,7 +290,8 @@ public class NewsStoryActivity extends RootActivity implements
     listenNow.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
     listenNow.setEnabled(isListenable);
     enqueue.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
-    enqueue.setEnabled(isListenable);
+    enqueue.setEnabled(isListenable &&
+        playlistRepository.getPlaylistItemFromStoryId(story.getId()) == null);
   }
 
   private void playStory(boolean playNow, int position) {
@@ -279,8 +310,6 @@ public class NewsStoryActivity extends RootActivity implements
 
 
     Tracker.LinkEvent e;
-    PlaylistRepository playlistRepository =
-        new PlaylistRepository(getApplicationContext(), getContentResolver());
     if (playNow) {
       PlaylistEntry activeEntry =
           playlistRepository.getPlaylistItemFromId(getActiveId());
@@ -405,6 +434,39 @@ public class NewsStoryActivity extends RootActivity implements
             }
           }
           break;
+      }
+    }
+  }
+
+  private class PlaylistChangedReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      int len = stories.size();
+      for (int i = 0 ; i < len ; i++) {
+        View v = workspace.getChildAt(i);
+        Button enqueue =
+            (Button) v.findViewById(R.id.NewsStoryListenEnqueueButton);
+        enqueue.setEnabled(
+            playlistRepository.getPlaylistItemFromStoryId(stories.get(i).getId()) == null);
+      }
+    }
+  }
+
+  private class PlaybackChangedReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      Long playlistId = intent.getLongExtra(PlaybackService.EXTRA_ID, -1);
+      if (playlistId != -1) {
+        PlaylistEntry pe = playlistRepository.getPlaylistItemFromId
+            (playlistId);
+        if (pe == null) return;
+        int len = stories.size();
+        for (int i = 0 ; i < len ; i++) {
+          View v = workspace.getChildAt(i);
+          Button listenNow =
+            (Button) v.findViewById(R.id.NewsStoryListenNowButton);
+          listenNow.setEnabled(!stories.get(i).getId().equals(pe.storyID));
+        }
       }
     }
   }

@@ -25,12 +25,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
-
+import android.widget.*;
 import org.npr.android.util.PlaylistRepository;
 import org.npr.api.Client;
 import org.npr.api.Story;
@@ -50,6 +45,8 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   private final ImageThreadLoader imageLoader;
   private RootActivity rootActivity = null;
   private final PlaylistRepository repository;
+  private long lastUpdate = -1;
+  private StoriesLoadedListener storiesLoadedListener;
 
   public NewsListAdapter(Context context) {
     super(context, R.layout.news_item);
@@ -70,6 +67,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     public void handleMessage(Message msg) {
       if (msg.what >= 0) {
         if (moreStories != null) {
+          lastUpdate = System.currentTimeMillis();
           remove(null);
           for (Story s : moreStories) {
             if (getPosition(s) < 0) {
@@ -79,6 +77,9 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
           if (!endReached) {
             add(null);
           }
+        }
+        if (storiesLoadedListener != null) {
+          storiesLoadedListener.storiesLoaded();
         }
       } else {
         Toast.makeText(rootActivity,
@@ -116,7 +117,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     Story story = getItem(position);
 
     ImageView icon = (ImageView) convertView.findViewById(R.id.NewsItemIcon);
-    TextView teaser = (TextView) convertView.findViewById(R.id.NewsItemTeaserText);
+    TextView topic = (TextView) convertView.findViewById(R.id.NewsItemTopicText);
     TextView name = (TextView) convertView.findViewById(R.id.NewsItemNameText);
     final ImageView image = (ImageView) convertView.findViewById(R.id.NewsItemImage);
 
@@ -124,7 +125,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       if (isPlayable(story)) {
         if (repository.getPlaylistItemFromStoryId(story.getId()) == null) {
           icon.setImageDrawable(
-              getContext().getResources().getDrawable(R.drawable.speaker)
+              getContext().getResources().getDrawable(R.drawable.speaker_icon)
           );
         } else {
           icon.setImageDrawable(
@@ -145,40 +146,29 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       // view and will be in italics
       name.setTypeface(name.getTypeface(), Typeface.BOLD);
 
-      String teaserText = story.getMiniTeaser();
-      if (teaserText == null) {
-        teaserText = story.getTeaser();
+      String topicText = story.getSlug();
+      for (Story.Parent p : story.getParentTopics()) {
+        if (p.isPrimary()) {
+          topicText = p.getTitle();
+        }
       }
-      if (teaserText != null && teaserText.length() > 0) {
-        teaser.setText(Html.fromHtml(teaserText));
-        teaser.setVisibility(View.VISIBLE);
+      if (topicText != null) {
+        topic.setText(topicText.toLowerCase());
       } else {
-        teaser.setVisibility(View.GONE);
+        topic.setText("");
       }
-      if (story.getImages().size() > 0) {
-        final String url = story.getImages().get(0).getSrc();
-        Drawable cachedImage = null;
-        cachedImage = imageLoader.loadImage(
-            url,
-            new ImageThreadLoader.ImageLoadedListener() {
-              public void imageLoaded(Drawable imageBitmap) {
-                View itemView = parent.getChildAt(position -
-                    ((ListView) parent).getFirstVisiblePosition());
-                if (itemView == null) {
-                  Log.w(LOG_TAG, "Could not find list item at position " +
-                      position);
-                  return;
-                }
-                ImageView img = (ImageView)
-                    itemView.findViewById(R.id.NewsItemImage);
-                if (img == null) {
-                  Log.w(LOG_TAG, "Could not find image for list item at " +
-                      "position " + position);
-                  return;
-                }
-                img.setImageDrawable(imageBitmap);
-              }
-            }
+      topic.setVisibility(View.VISIBLE);
+
+      String imageUrl = null;
+      if (story.getThumbnails().size() > 0) {
+        imageUrl = story.getThumbnails().get(0).getMedium();
+      } else if (story.getImages().size() > 0) {
+        imageUrl = story.getImages().get(0).getSrc();
+      }
+      if (imageUrl != null) {
+        Drawable cachedImage = imageLoader.loadImage(
+            imageUrl,
+            new ImageLoadListener(position, (ListView) parent)
         );
 
         image.setImageDrawable(cachedImage);
@@ -190,7 +180,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
     } else {
       // null marker means it's the end of the list.
       icon.setVisibility(View.INVISIBLE);
-      teaser.setVisibility(View.INVISIBLE);
+      topic.setVisibility(View.GONE);
       image.setVisibility(View.GONE);
       name.setTypeface(name.getTypeface(), Typeface.ITALIC);
       name.setText(R.string.msg_load_more);
@@ -262,5 +252,64 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       result = result.substring(0, result.length() - 1);
     }
     return result;
+  }
+
+  /**
+   * Returns the time (in milliseconds since the epoch) of when
+   * the last update was.
+   *
+   * @return A time unit in milliseconds since the epoch
+   */
+  public long getLastUpdate() {
+    return lastUpdate;
+  }
+
+
+  /**
+   * A call back that can be used to be notified when stories are done
+   * loading.
+   */
+  public interface StoriesLoadedListener {
+    void storiesLoaded();
+  }
+
+  /**
+   * Sets a listener to be notified when stories are done loading
+   * @param listener A {@link StoriesLoadedListener}
+   */
+  public void setStoriesLoadedListener(StoriesLoadedListener listener) {
+    storiesLoadedListener = listener;
+  }
+
+  private class ImageLoadListener implements ImageThreadLoader.ImageLoadedListener {
+
+    private int position;
+    private ListView parent;
+
+    public ImageLoadListener(int position, ListView parent) {
+      this.position = position;
+      this.parent = parent;
+    }
+
+    public void imageLoaded(Drawable imageBitmap) {
+      // Offset 1 for header
+      int storyPosition = position + 1;
+      View itemView = parent.getChildAt(storyPosition -
+          parent.getFirstVisiblePosition());
+      if (itemView == null) {
+        Log.w(LOG_TAG, "Could not find list item at position " +
+            storyPosition);
+        return;
+      }
+      ImageView img = (ImageView)
+          itemView.findViewById(R.id.NewsItemImage);
+      if (img == null) {
+        Log.w(LOG_TAG, "Could not find image for list item at " +
+            "position " + storyPosition);
+        return;
+      }
+      Log.d(LOG_TAG, "Drawing image at position " + storyPosition);
+      img.setImageDrawable(imageBitmap);
+    }
   }
 }

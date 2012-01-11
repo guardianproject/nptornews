@@ -34,7 +34,7 @@ public class Constants {
       "mode_for_station_list_activity";
   public static final String EXTRA_ON_AIR = "program_is_on_air";
   public static final String EXTRA_PODCAST_URL = "podcast_rss_feed_url";
-
+  public static final String EXTRA_TEASER_ONLY = "teaser_only";
   private Constants() {
     // no instantiation
   }

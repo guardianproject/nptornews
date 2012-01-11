@@ -144,7 +144,7 @@ public class AllProgramsActivity extends TitleActivity implements
     }
     Intent i = new Intent(this, ProgramStoryListActivity.class);
     i.putExtra(Constants.EXTRA_LIVE_STREAM_RSS_URL, item.getLiveStreamUrl());
-
+    i.putExtra(Constants.EXTRA_TEASER_ONLY, true);
 
     String grouping = getString(type);
     String description = item.getTitle();
@@ -171,7 +171,6 @@ public class AllProgramsActivity extends TitleActivity implements
         i.putExtra(Constants.EXTRA_ON_AIR, true);
       }
     }
-
 
     i.putExtra(Constants.EXTRA_DESCRIPTION, description);
     i.putExtra(Constants.EXTRA_GROUPING, grouping);
@@ -262,7 +261,7 @@ public class AllProgramsActivity extends TitleActivity implements
       if (item != null && item.isHeader()) {
         v.setEnabled(false);
         v.setBackgroundDrawable(
-            getResources().getDrawable(R.drawable.news_list_title_background)
+            getResources().getDrawable(R.drawable.top_stories_title_background)
         );
         v.getLayoutParams().height =
           DisplayUtils.convertToDIP(getContext(), 30);

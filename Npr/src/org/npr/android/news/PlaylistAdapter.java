@@ -59,7 +59,7 @@ public class PlaylistAdapter extends CursorAdapter {
     if (id.equals(activeId)) {
       view.setBackgroundDrawable(context.getResources().getDrawable(R.drawable
           .playlist_entry_background_active));
-      playlistItemState.setImageResource(R.drawable.speaker);
+      playlistItemState.setImageResource(R.drawable.speaker_icon);
     } else {
       view.setBackgroundDrawable(null);
       view.setBackgroundColor(android.R.color.transparent);

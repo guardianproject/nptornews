@@ -174,6 +174,7 @@ public class NewsTopicActivity extends TitleActivity implements
     params.put(ApiConstants.PARAM_ID, topicId);
     params.put(ApiConstants.PARAM_FIELDS, ApiConstants.STORY_FIELDS);
     params.put(ApiConstants.PARAM_SORT, "assigned");
+    params.put(ApiConstants.PARAM_REQUIRED_ASSETS, "text");
     String url =
         ApiConstants.instance().createUrl(ApiConstants.STORY_PATH, params);
 

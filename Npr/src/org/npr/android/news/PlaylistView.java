@@ -24,29 +24,16 @@ import android.database.Cursor;
 import android.graphics.Rect;
 import android.os.Handler;
 import android.os.Message;
+import android.util.AttributeSet;
 import android.util.Log;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.View;
+import android.view.*;
 import android.view.View.OnClickListener;
-import android.view.ViewConfiguration;
-import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.AdapterView;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.RelativeLayout;
-import android.widget.SeekBar;
+import android.widget.*;
 import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.SlidingDrawer;
 import android.widget.SlidingDrawer.OnDrawerCloseListener;
 import android.widget.SlidingDrawer.OnDrawerOpenListener;
-import android.widget.TextView;
-
 import org.npr.android.util.DisplayUtils;
 import org.npr.android.util.PlaylistEntry;
 import org.npr.android.util.PlaylistProvider;
@@ -102,6 +89,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private int startY;
   private boolean cancelDown;
 
+
   private enum ClickedItem {
     rewind, rewind30, playPause, fastForward, contractedPlay, progressbar
   }
@@ -137,10 +125,12 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
             }
 
             @Override
-            public void onAnimationStart(Animation animation) {}
+            public void onAnimationStart(Animation animation) {
+            }
 
             @Override
-            public void onAnimationRepeat(Animation animation) {}
+            public void onAnimationRepeat(Animation animation) {
+            }
           });
 
           listItem.startAnimation(fling);
@@ -149,9 +139,32 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     }
   };
 
+  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context) {
     super(context);
     this.context = context;
+  }
+
+  @SuppressWarnings({"UnusedDeclaration"})
+  public PlaylistView(Context context, AttributeSet attrs) {
+    super(context, attrs);
+    this.context = context;
+  }
+
+  @SuppressWarnings({"UnusedDeclaration"})
+  public PlaylistView(Context context, AttributeSet attrs, int defStyle) {
+    super(context, attrs, defStyle);
+    this.context = context;
+  }
+
+  /**
+   * Returns a pointer to the SlidingDrawer for the
+   * player window.
+   *
+   * @return The player's SlidingDrawer
+   */
+  public SlidingDrawer getPlayerDrawer() {
+    return drawer;
   }
 
   @Override
@@ -215,6 +228,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     if (intent != null) {
       changeReceiver.onReceive(context, intent);
     } else {
+      Log.d(LOG_TAG, "Call clearPlayer from init");
       clearPlayer();
     }
 
@@ -256,6 +270,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     refreshList();
   }
 
+
   private void refreshList() {
     playlistAdapter.getCursor().requery();
     playlistAdapter.notifyDataSetChanged();
@@ -264,7 +279,6 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   @Override
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
-    Log.d(LOG_TAG, "detached from window");
     // Emulator calls detach twice, so clear receiver
     if (changeReceiver != null) {
       context.unregisterReceiver(changeReceiver);
@@ -408,8 +422,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     @Override
     public void onReceive(Context context, Intent intent) {
       int duration = intent.getIntExtra(PlaybackService.EXTRA_DURATION, 1);
+      // Drop out if no duration is given (flicker?)
+      if (duration == 1) {
+        Log.v(LOG_TAG, "Playback update; no duration dropout");
+        return;
+      }
+
       int position = intent.getIntExtra(PlaybackService.EXTRA_POSITION, 0);
       int downloaded = intent.getIntExtra(PlaybackService.EXTRA_DOWNLOADED, 1);
+      Log.v(LOG_TAG, "Playback update; position = " + position + " millsecs; " +
+          "downloaded = " + duration + " millsecs");
       boolean isPlaying = intent.getBooleanExtra(PlaybackService
           .EXTRA_IS_PLAYING, false);
       if (!changingProgress) {
@@ -463,6 +485,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private class PlaybackCloseReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+      Log.d(LOG_TAG, "Playback close received - calling clear player");
       clearPlayer();
       refreshList();
     }
@@ -964,4 +987,5 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   public String getActiveId() {
     return playlistAdapter.getActiveId();
   }
+
 }

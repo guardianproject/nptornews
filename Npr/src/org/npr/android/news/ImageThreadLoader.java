@@ -187,7 +187,6 @@ public class ImageThreadLoader {
     queue.add(item);
 
     // start the thread if needed
-    // NB: this might not work right; it's untested
     if (thread.getState() == State.NEW) {
       thread.start();
     } else if (thread.getState() == State.TERMINATED) {

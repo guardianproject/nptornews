@@ -32,7 +32,7 @@
     android:id="@+id/StationItemPlayableImage"
     android:layout_width="27dip"
     android:layout_height="22dip"
-    android:src="@drawable/speaker"
+    android:src="@drawable/speaker_icon"
     android:layout_marginLeft="5dip"
     android:layout_gravity="center_vertical"
     android:scaleType="centerInside"/>

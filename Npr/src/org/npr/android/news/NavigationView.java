@@ -76,7 +76,7 @@ public class NavigationView extends FrameLayout implements
       if (activity != null && activity.isHeader()) {
         convertView.setEnabled(false);
         convertView.setBackgroundDrawable(getResources().getDrawable(
-          R.drawable.news_list_title_background));
+          R.drawable.top_stories_title_background));
         convertView.getLayoutParams().height =
           DisplayUtils.convertToDIP(getContext(), 30);
         ((TextView) convertView.findViewById(android.R.id.text1))
@@ -127,7 +127,7 @@ public class NavigationView extends FrameLayout implements
         .putExtra(Constants.EXTRA_QUERY_URL, newsUrl)
         .putExtra(Constants.EXTRA_DESCRIPTION, description)
         .putExtra(Constants.EXTRA_GROUPING, grouping)
-        .putExtra(Constants.EXTRA_SIZE, 5)),
+        .putExtra(Constants.EXTRA_SIZE, 10)),
       new SubActivity(new Intent(getContext(), NewsTopicActivity.class)
         .putExtra(Constants.EXTRA_SUBACTIVITY_ID,
           R.string.msg_main_subactivity_topics)),

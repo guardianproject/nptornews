@@ -1,57 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<SlidingDrawer
+<FrameLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:id="@+id/drawer"
   android:layout_width="fill_parent"
-  android:layout_height="fill_parent"
-  android:handle="@+id/handle"
-  android:content="@+id/playlist_content"
-  android:orientation="vertical"
-  android:allowSingleTap="false">
-  <RelativeLayout
-    android:id="@id/handle"
+  android:layout_height="fill_parent">
+  <SlidingDrawer
+    android:id="@+id/drawer"
     android:layout_width="fill_parent"
-    android:layout_height="95dp"
-    android:background="@drawable/contracted_player_bg">
-    <include
-      layout="@layout/player_contracted"/>
-    <include
-      layout="@layout/player_expanded"/>
-  </RelativeLayout>
-  <RelativeLayout
-    android:id="@id/playlist_content"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
-    <org.npr.android.widget.DragNDropListView
-      android:id="@+id/playlist"
+    android:layout_height="fill_parent"
+    android:handle="@+id/handle"
+    android:content="@+id/playlist_content"
+    android:orientation="vertical"
+    android:allowSingleTap="false">
+    <RelativeLayout
+      android:id="@id/handle"
       android:layout_width="fill_parent"
-      android:layout_height="fill_parent"
-      android:layout_alignParentLeft="true"
-      android:layout_alignParentTop="true"
-      android:layout_marginBottom="50dip"/>
-    <LinearLayout
+      android:layout_height="95dp"
+      android:background="@drawable/contracted_player_bg">
+      <include
+        layout="@layout/player_contracted"/>
+      <include
+        layout="@layout/player_expanded"/>
+    </RelativeLayout>
+    <RelativeLayout
+      android:id="@id/playlist_content"
       android:layout_width="fill_parent"
-      android:layout_height="50dip"
-      android:layout_alignParentLeft="true"
-      android:layout_alignParentBottom="true"
-      android:gravity="center_vertical"
-      android:padding="10dip"
-      android:background="@drawable/app_title_background"
-      android:orientation="horizontal">
-      <Button
-        android:id="@+id/clear_played_segments"
-        android:text="@string/msg_clear_played_segments"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        style="@style/actionButton"/>
-      <Button
-        android:id="@+id/clear_playlist"
-        android:text="@string/msg_clear_playlist"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        style="@style/actionButton"/>
-    </LinearLayout>
-  </RelativeLayout>
-</SlidingDrawer>
+      android:layout_height="fill_parent">
+      <org.npr.android.widget.DragNDropListView
+        android:id="@+id/playlist"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginBottom="50dip"/>
+      <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="50dip"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentBottom="true"
+        android:gravity="center_vertical"
+        android:padding="10dip"
+        android:background="@drawable/app_title_background"
+        android:orientation="horizontal">
+        <Button
+          android:id="@+id/clear_played_segments"
+          android:text="@string/msg_clear_played_segments"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          style="@style/actionButton"/>
+        <Button
+          android:id="@+id/clear_playlist"
+          android:text="@string/msg_clear_playlist"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          style="@style/actionButton"/>
+      </LinearLayout>
+    </RelativeLayout>
+  </SlidingDrawer>
+</FrameLayout>

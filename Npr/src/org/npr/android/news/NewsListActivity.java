@@ -19,6 +19,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -34,11 +35,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-
-import org.npr.android.util.DisplayUtils;
-import org.npr.android.util.PlaylistEntry;
-import org.npr.android.util.PlaylistRepository;
-import org.npr.android.util.Tracker;
+import org.npr.android.util.*;
 import org.npr.android.util.Tracker.StoryListMeasurement;
 import org.npr.api.ApiConstants;
 import org.npr.api.Story;
@@ -58,6 +55,7 @@ public class NewsListActivity extends TitleActivity implements
 
   protected NewsListAdapter listAdapter;
   private ListView listView;
+  private BannerView bannerView;
 
   private static final Map<String, Story> storyCache = new HashMap<String, Story>();
 
@@ -69,13 +67,16 @@ public class NewsListActivity extends TitleActivity implements
 
   private BroadcastReceiver playlistChangedReceiver;
 
+
   // Message handler to communicate between the gestures and the activity
   private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
       switch (msg.what) {
-        case ListItemGestureListener.MSG_LONG_PRESS:
-          lastLongPressPosition = msg.arg1;
+        case ListItemGestureListener.MSG_LONG_PRESS: {
+
+            lastLongPressPosition = msg.arg1;
+
           Story longPressStory = listAdapter.getItem(msg.arg1);
           if (longPressStory != null && longPressStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
@@ -99,10 +100,13 @@ public class NewsListActivity extends TitleActivity implements
               playEntryNow(playlistEntry);
             }
           }
-          break;
-        case ListItemGestureListener.MSG_FLING:
-          flungStory = listAdapter.getItem(msg.arg1);
-          if ( flungStory != null && flungStory.getPlayable() != null) {
+        }
+        break;
+
+        case ListItemGestureListener.MSG_FLING: {
+
+            flungStory = listAdapter.getItem(msg.arg1);
+          if (flungStory != null && flungStory.getPlayable() != null) {
             PlaylistRepository playlistRepository =
                 new PlaylistRepository(getApplicationContext(),
                     getContentResolver());
@@ -126,7 +130,8 @@ public class NewsListActivity extends TitleActivity implements
               );
             }
           }
-          break;
+        }
+        break;
       }
     }
   };
@@ -156,7 +161,7 @@ public class NewsListActivity extends TitleActivity implements
   protected void onCreate(Bundle savedInstanceState) {
     if (getIntent() == null ||
         !(getIntent().hasExtra(Constants.EXTRA_QUERY_URL)
-        || getIntent().hasExtra(Constants.EXTRA_PODCAST_URL))) {
+            || getIntent().hasExtra(Constants.EXTRA_PODCAST_URL))) {
       setDefaultIntent();
     }
     grouping = getIntent().getStringExtra(Constants.EXTRA_GROUPING);
@@ -169,20 +174,26 @@ public class NewsListActivity extends TitleActivity implements
     // TODO: move this to a layout?
     View titleBar = findViewById(R.id.TitleBar);
     titleBar.setBackgroundDrawable(getResources().getDrawable(
-        R.drawable.news_list_title_background));
-    titleBar.getLayoutParams().height = DisplayUtils.convertToDIP(this, 20);
+        R.drawable.top_stories_title_background));
     TextView titleText = (TextView) findViewById(R.id.TitleText);
     titleText.setTextColor(getResources().getColor(R.color.news_title_text));
+    TextView titleRight = (TextView) findViewById(R.id.TitleRight);
+    titleRight.setTextColor(getResources().getColor(R.color.news_title_text));
+
+    ViewGroup bannerHolder = (ViewGroup) findViewById(R.id.SponsorshipBanner);
+    ViewGroup.inflate(this, R.layout.banner, bannerHolder);
+    bannerView = (BannerView) bannerHolder.getChildAt(0);
+    bannerView.setPlayerView(getPlaylistView());
 
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news, container);
 
-
     listView = (ListView) findViewById(R.id.ListView01);
+
     listView.setOnItemClickListener(this);
     listAdapter = new NewsListAdapter(this);
+    listAdapter.setStoriesLoadedListener(listener);
     listView.setAdapter(listAdapter);
-
 
     // Gesture detection
     gestureDetector = new GestureDetector(
@@ -202,12 +213,28 @@ public class NewsListActivity extends TitleActivity implements
     addStories();
   }
 
+  private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
+    @Override
+    public void storiesLoaded() {
+      bannerView.startCloseTimer();
+    }
+  };
+
+
+  @Override
+  protected void onStart() {
+    super.onStart();
+    handler.postDelayed(updateTime, UPDATE_SHORT_PERIOD);
+
+  }
+
   @Override
   protected void onStop() {
     if (playlistChangedReceiver != null) {
       unregisterReceiver(playlistChangedReceiver);
       playlistChangedReceiver = null;
     }
+    handler.removeCallbacks(updateTime);
     super.onStop();
   }
 
@@ -231,6 +258,10 @@ public class NewsListActivity extends TitleActivity implements
           listAdapter.getStoryIdList()
       );
       i.putExtra(Constants.EXTRA_STORY_ID, s.getId());
+      if (getIntent().hasExtra(Constants.EXTRA_TEASER_ONLY)) {
+          i.putExtra(Constants.EXTRA_TEASER_ONLY,
+                  getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false));
+      }
       startActivityWithoutAnimation(i);
     }
   }
@@ -238,7 +269,7 @@ public class NewsListActivity extends TitleActivity implements
   private void addStories() {
     String url = getApiUrl();
     if (url != null) {
-    // Adding these parameters to podcast urls (like WNYC) can break them
+      // Adding these parameters to podcast urls (like WNYC) can break them
       Map<String, String> params = new HashMap<String, String>();
       params.put("startNum", "" + listAdapter.getCount());
       params.put("numResults", "" + initialSize);
@@ -339,8 +370,9 @@ public class NewsListActivity extends TitleActivity implements
 
       @Override
       public void onAnimationEnd(Animation animation) {
-        icon.setImageDrawable(getResources().getDrawable(R.drawable
-            .speaker));
+        icon.setImageDrawable(getResources().getDrawable(
+            R.drawable.speaker_icon
+        ));
         // Need to update the list after animation so the correct item is animated
         if (flungStory != null) {
           PlaylistRepository playlistRepository =
@@ -410,7 +442,7 @@ public class NewsListActivity extends TitleActivity implements
    * Gets a podcast RSS feed used for looking up the items for the list. This
    * will only be queried if getApiUrl returns null. No additional parameters
    * are added to the podcast list and all stories are shown immediately.
-   *
+   * <p/>
    * The default implementation pulls the URL from the Intent's
    * EXTRA_PODCAST_URL value.
    *
@@ -424,6 +456,7 @@ public class NewsListActivity extends TitleActivity implements
   public CharSequence getMainTitle() {
     return description;
   }
+
 
   @Override
   public void trackNow() {
@@ -465,9 +498,38 @@ public class NewsListActivity extends TitleActivity implements
         .putExtra(Constants.EXTRA_QUERY_URL, url)
         .putExtra(Constants.EXTRA_DESCRIPTION, "Top Stories")
         .putExtra(Constants.EXTRA_GROUPING, grouping)
-        .putExtra(Constants.EXTRA_SIZE, 5);
+        .putExtra(Constants.EXTRA_SIZE, 10);
     setIntent(i);
   }
+
+  // Update every five seconds until we have a result
+  private static final long UPDATE_SHORT_PERIOD = 5000L;
+
+  // Update once a minute once we have a result
+  private static final long UPDATE_LONG_PERIOD = 60000L;
+
+  private Runnable updateTime = new Runnable() {
+    public void run() {
+      if (listAdapter == null) {
+        handler.postDelayed(this, UPDATE_SHORT_PERIOD);
+        return;
+      }
+      long lastUpdate = listAdapter.getLastUpdate();
+      if (lastUpdate < 0) {
+        handler.postDelayed(this, UPDATE_SHORT_PERIOD);
+        return;
+      }
+      String label =
+          String.format(getString(R.string.msg_update_format),
+              TimeUtils.formatMillis(
+                  System.currentTimeMillis() - lastUpdate,
+                  TimeUnit.DAYS,
+                  TimeUnit.MINUTES
+              ));
+      setTitleRight(label);
+      handler.postDelayed(this, UPDATE_LONG_PERIOD);
+    }
+  };
 
   private class PlaylistChangedReceiver extends BroadcastReceiver {
     @Override
