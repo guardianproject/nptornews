@@ -74,6 +74,12 @@ public class NewsListActivity extends TitleActivity implements
   private final Handler handler = new Handler() {
     @Override
     public void handleMessage(Message msg) {
+
+      // Ignore when list is empty, e.g. no connectivity
+      if (listAdapter.getCount() == 0) {
+        return;
+      }
+
       switch (msg.what) {
         case ListItemGestureListener.MSG_LONG_PRESS: {
 
@@ -245,6 +251,7 @@ public class NewsListActivity extends TitleActivity implements
       playlistChangedReceiver = null;
     }
     handler.removeCallbacks(updateTime);
+    bannerView.cancelUpdates();
     super.onStop();
   }
 

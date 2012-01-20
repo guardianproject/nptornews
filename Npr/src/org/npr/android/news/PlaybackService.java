@@ -48,7 +48,6 @@ import java.net.ConnectException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
-import java.sql.Connection;
 import java.util.List;
 
 public class PlaybackService extends Service implements
@@ -240,8 +239,10 @@ public class PlaybackService extends Service implements
     } else if (action.equals(SERVICE_SEEK_TO)) {
       seekTo(intent.getIntExtra(EXTRA_SEEK_TO, 0));
     } else if (action.equals(SERVICE_PLAY_NEXT)) {
+      seekToPosition = 0;
       playNextEntry();
     } else if (action.equals(SERVICE_PLAY_PREVIOUS)) {
+      seekToPosition = 0;
       playPreviousEntry();
     } else if (action.equals(SERVICE_STOP_PLAYBACK)) {
       stopSelfResult(startId);
@@ -626,6 +627,7 @@ public class PlaybackService extends Service implements
       }
     }
 
+    seekToPosition = 0;
     if (current != null) {
       Tracker.StopEvent e = new Tracker.StopEvent(current.getUrl());
       Tracker.instance(getApplication()).trackLink(e);

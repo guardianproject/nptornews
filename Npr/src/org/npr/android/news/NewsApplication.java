@@ -85,9 +85,10 @@ public class NewsApplication extends Application {
    * stations, will always find a value.
    */
   private void launchLocationListeners() {
+
     LocationManager lm =
         (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-    List<String> providers = lm.getAllProviders();
+    List<String> providers = lm.getProviders(false);
     for (String provider : providers) {
       LocationListener listener = new LocationListener() {
 

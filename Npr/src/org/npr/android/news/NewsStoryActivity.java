@@ -125,8 +125,10 @@ public class NewsStoryActivity extends RootActivity implements
       if (storyId.equals(currentStoryId)) {
         trackerItem = new TrackerItem();
         workspace.setCurrentScreen(i);
-        trackerItem.orgId = story.getOrganizations().size() > 0 ?
-            story.getOrganizations().get(0).getId() : null;
+        List<Story.Organization> organizations = story.getOrganizations();
+        if (organizations != null && organizations.size() > 0) {
+          trackerItem.orgId = organizations.get(0).getId();
+        }
 
         for (Story.Parent p : story.getParents()) {
           if (p.isPrimary()) {
