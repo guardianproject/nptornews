@@ -154,7 +154,11 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   @Override
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
+    cancelUpdates();
+  }
 
+  public void cancelUpdates() {
+    Log.d(LOG_TAG, "Banner close messages removed");
     handler.removeMessages(MSG_START_CLOSE);
     handler.removeMessages(MSG_SCROLL_IN);
     handler.removeMessages(MSG_SCROLL_OUT);

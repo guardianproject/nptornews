@@ -503,13 +503,13 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     @Override
     public void onReceive(Context context, Intent intent) {
       Log.d(LOG_TAG, "Playback error received - toasting message");
-      String message = "Unknown error occurred.";
+      String message = context.getString(R.string.msg_unknown_error);
 
       int error = intent.getIntExtra(PlaybackService.EXTRA_ERROR, -1);
       if (error == PlaybackService.PLAYBACK_SERVICE_ERROR.Playback.ordinal()) {
         message = context.getString(R.string.msg_playback_error);
       } else if (error == PlaybackService.PLAYBACK_SERVICE_ERROR.Connection.ordinal()) {
-        message = context.getString(R.string.connection_error);
+        message = context.getString(R.string.msg_playback_connection_error);
       }
       Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }

@@ -375,21 +375,7 @@ public class StationListActivity extends TitleActivity implements
     Log.d(LOG_TAG, "finding local stations");
     LocationManager lm =
         (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-    Location location = null;
-
-    // Order here matters. This will search the network provider first, which is
-    // more likely to be up to date. Since we are not actively polling, this is
-    // more resilient to changes (e.g. going on an airplane and touching down
-    // and not firing up the GPS again before running this app).
-    String[] providers =
-        {LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER};
-    for (String provider : providers) {
-      Location loc = lm.getLastKnownLocation(provider);
-      if (loc != null) {
-        location = loc;
-        break;
-      }
-    }
+    Location location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
     if (location != null) {
       double lat = location.getLatitude();
