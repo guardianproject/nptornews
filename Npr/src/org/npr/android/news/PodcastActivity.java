@@ -111,7 +111,13 @@ public class PodcastActivity extends RootActivity implements
         titleText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         if (podcastLoaded) {
           summary.setVisibility(View.VISIBLE);
-          summary.setText(Html.fromHtml(podcast.getSummary()));
+          String podcastSummary = podcast.getSummary();
+          if (podcastSummary != null && podcastSummary.length() > 0) {
+            summary.setText(Html.fromHtml(podcastSummary));
+          } else {
+            Log.e(LOG_TAG, "Empty podcast summary");
+            summary.setText("");
+          }
           summary.setTextColor(getResources().getColor(R.color.black));
           summary.setTextAppearance(getContext(),
               android.R.attr.textAppearanceSmall);

@@ -111,7 +111,7 @@ public class NavigationView extends FrameLayout implements
 
     String grouping = null;
     String description = "Top Stories";
-    String topicId = "1002";
+    String topicId = "1001";
     Map<String, String> params = new HashMap<String, String>();
     params.put("id", topicId);
     params.put("fields", ApiConstants.STORY_FIELDS);

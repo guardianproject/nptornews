@@ -499,7 +499,7 @@ public class NewsListActivity extends TitleActivity implements
   // When first starting up, load the top news stories
   private void setDefaultIntent() {
     Map<String, String> params = new HashMap<String, String>();
-    params.put("id", "1002");
+    params.put("id", "1001");
     params.put("fields", ApiConstants.STORY_FIELDS);
     params.put("sort", "assigned");
     String url = ApiConstants.instance().createUrl(ApiConstants.STORY_PATH,

@@ -771,7 +771,7 @@ public class Story extends ApiElement {
       Attr typeAttr = (Attr) node.getAttributes().getNamedItem("type");
       if (typeAttr != null) {
         type = typeAttr.getValue();
-        if (typeAttr.equals("primaryTopic")) {
+        if (type.equals("primaryTopic")) {
           isPrimary = true;
         }
       }
@@ -859,7 +859,8 @@ public class Story extends ApiElement {
       }
 
       try {
-        src = src.replaceAll("&s=[0-9]+", "&s=13");
+        src = src.replaceAll("&s=[0-9]+", "");
+        src = src.concat("&s=13");
       } catch (NullPointerException e) {
         Log.e(LOG_TAG, "Error replacing size in story image parsing");
       }

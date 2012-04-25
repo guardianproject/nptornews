@@ -80,7 +80,6 @@ public class HourlyNewsActivity extends RootActivity implements
     ViewGroup container = (ViewGroup) findViewById(R.id.TitleContent);
     ViewGroup.inflate(this, R.layout.hourly_news, container);
 
-
     hourlyPubDate = (TextView) findViewById(R.id.HourlyPubDate);
     hourlyDuration = (TextView) findViewById(R.id.HourlyDuration);
 
@@ -125,7 +124,7 @@ public class HourlyNewsActivity extends RootActivity implements
         Log.w(LOG_TAG, "Play hourly news podcast");
         final Playable newsPlayable = Playable.PlayableFactory
             .fromPodcastItem(podcast.getItems().get(0), "", "");
-        newsPlayable.setActivity(HourlyNewsActivity.class);
+        newsPlayable.setActivityName(HourlyNewsActivity.class.getName());
         playSingleNow(newsPlayable);
         break;
     }

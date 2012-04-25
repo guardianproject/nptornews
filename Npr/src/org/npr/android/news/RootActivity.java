@@ -45,6 +45,8 @@ import org.npr.android.util.PlaylistEntry;
 import org.npr.android.util.PlaylistRepository;
 import org.npr.api.ApiConstants;
 
+import com.crittercism.app.Crittercism;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -91,6 +93,12 @@ public abstract class RootActivity extends ActivityGroup implements
         (ProgressBar) findViewById(R.id.WindowProgressIndicator);
 
     trackNow();
+
+    // Initializes the crittercism library
+    /*Crittercism.init(getApplicationContext(),
+        "", // Code removed from open source
+        true);
+    */
   }
 
 

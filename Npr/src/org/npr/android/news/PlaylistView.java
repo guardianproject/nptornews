@@ -20,8 +20,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Rect;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
@@ -88,7 +90,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private int startX;
   private int startY;
   private boolean cancelDown;
-
+  private Playable storedPlayable = null;
 
   private enum ClickedItem {
     rewind, rewind30, playPause, fastForward, contractedPlay, progressbar
@@ -276,8 +278,10 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
 
   private void refreshList() {
-    playlistAdapter.getCursor().requery();
-    playlistAdapter.notifyDataSetChanged();
+    if (playlistAdapter != null) {
+      playlistAdapter.getCursor().requery();
+      playlistAdapter.notifyDataSetChanged();
+    }
   }
 
   @Override
@@ -416,13 +420,23 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
   private class PlaybackChangeReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-      String title = intent.getStringExtra(PlaybackService.EXTRA_TITLE);
-      newsItemText.setText(title);
-      contractedNewsItemText.setText(title);
-      playlistAdapter.setActiveId(Long.toString(intent.getLongExtra(
-          PlaybackService.EXTRA_ID, -1)));
+      try {
+        Context serviceContext = context.createPackageContext(context.getPackageName(),
+            Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+        Bundle bundle = intent.getExtras();
+        bundle.setClassLoader(serviceContext.getClassLoader());
+        storedPlayable = bundle.getParcelable(Playable.PLAYABLE_TYPE);
+        if (storedPlayable != null) {
+          newsItemText.setText(storedPlayable.getTitle());
+          contractedNewsItemText.setText(storedPlayable.getTitle());
+          playlistAdapter.setActiveId(Long.toString(storedPlayable.getId()));
+        }
+      } catch (PackageManager.NameNotFoundException e) {
+        Log.e(LOG_TAG, "Name not found exception in playback change", e);
+      }
       refreshList();
       configurePlayerControls();
+      showPlayPause(false);
     }
   }
 
@@ -478,8 +492,13 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
       if (isPlaying == playPauseShowsPlay) {
         if (isPlaying) {
-          playPauseButton.setImageResource(R.drawable.pause_button_normal);
-          contractedPlayButton.setImageResource(R.drawable.pause_button_normal);
+          if (storedPlayable == null || !storedPlayable.isStream()) {
+            playPauseButton.setImageResource(R.drawable.pause_button_normal);
+            contractedPlayButton.setImageResource(R.drawable.pause_button_normal);
+          } else {
+            playPauseButton.setImageResource(R.drawable.stop_button_normal);
+            contractedPlayButton.setImageResource(R.drawable.stop_button_normal);
+          }
           playPauseShowsPlay = false;
         } else {
           playPauseButton.setImageResource(R.drawable.play_button_normal);
@@ -630,12 +649,22 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
         contractedPlayButton.setImageResource(R.drawable.play_button_normal);
       }
     } else {
-      if (showPressed) {
-        playPauseButton.setImageResource(R.drawable.pause_button_pressed);
-        contractedPlayButton.setImageResource(R.drawable.pause_button_pressed);
+      if (storedPlayable == null || !storedPlayable.isStream()) {
+        if (showPressed) {
+          playPauseButton.setImageResource(R.drawable.pause_button_pressed);
+          contractedPlayButton.setImageResource(R.drawable.pause_button_pressed);
+        } else {
+          playPauseButton.setImageResource(R.drawable.pause_button_normal);
+          contractedPlayButton.setImageResource(R.drawable.pause_button_normal);
+        }
       } else {
-        playPauseButton.setImageResource(R.drawable.pause_button_normal);
-        contractedPlayButton.setImageResource(R.drawable.pause_button_normal);
+        if (showPressed) {
+          playPauseButton.setImageResource(R.drawable.stop_button_pressed);
+          contractedPlayButton.setImageResource(R.drawable.stop_button_pressed);
+        } else {
+          playPauseButton.setImageResource(R.drawable.stop_button_normal);
+          contractedPlayButton.setImageResource(R.drawable.stop_button_normal);
+        }
       }
     }
   }
@@ -689,6 +718,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
                 showPlayPause(false);
                 Intent intent = new Intent(context, PlaybackService.class);
                 intent.setAction(PlaybackService.SERVICE_TOGGLE_PLAY);
+                intent.putExtra(Playable.PLAYABLE_TYPE, storedPlayable);
                 context.startService(intent);
               } else {
                 closeDrawerIfPastThreshold(y);
@@ -863,6 +893,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
                 showPlayPause(false);
                 Intent intent = new Intent(context, PlaybackService.class);
                 intent.setAction(PlaybackService.SERVICE_TOGGLE_PLAY);
+                intent.putExtra(Playable.PLAYABLE_TYPE, storedPlayable);
                 context.startService(intent);
               } else {
                 Rect r = new Rect();

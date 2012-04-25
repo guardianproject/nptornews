@@ -299,12 +299,16 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     }
 
     sponsorshipWindowState = SponsorshipWindowStates.Closing;
-    AnimationReturn r = getAnimationWindow();
-    animationView = r.view;
-    bannerHeight = r.bannerHeight;
-    startY = screenHeight - r.bitmapHeight;
-    animationStartTime = System.currentTimeMillis();
-    handler.sendEmptyMessage(MSG_SCROLL_OUT);
+    try {
+      AnimationReturn r = getAnimationWindow();
+      animationView = r.view;
+      bannerHeight = r.bannerHeight;
+      startY = screenHeight - r.bitmapHeight;
+      animationStartTime = System.currentTimeMillis();
+      handler.sendEmptyMessage(MSG_SCROLL_OUT);
+    } catch (WindowManager.BadTokenException e) {
+      Log.e(LOG_TAG, "Bad token exception caught, bailing");
+    }
   }
 
   @Override

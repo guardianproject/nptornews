@@ -101,6 +101,7 @@ public class PlaylistRepository {
   }
 
   public void markAsRead(long id) {
+    Log.d(LOG_TAG, "Item with id " + id + " is being marked as read.");
     Uri update = ContentUris.withAppendedId(PlaylistProvider.CONTENT_URI, id);
     ContentValues values = new ContentValues();
     values.put(Items.IS_READ, true);
@@ -188,11 +189,12 @@ public class PlaylistRepository {
       return null;
     }
 
-    String selection = PlaylistProvider.Items.PLAY_ORDER + " = ?";
+    String selection = PlaylistProvider.Items.PLAY_ORDER + " < ?";
     String[] selectionArgs = new String[1];
-    selectionArgs[0] = Integer.toString(entry.playOrder - 1);
+    selectionArgs[0] = Integer.toString(entry.playOrder);
+    String sort = PlaylistProvider.Items.PLAY_ORDER + " desc";
     PlaylistEntry playlistEntry = retrievePlaylistItem(selection,
-        selectionArgs, null);
+        selectionArgs, sort);
     if (playlistEntry == null) {
       return null;
     } else {
@@ -206,9 +208,10 @@ public class PlaylistRepository {
       return null;
     }
 
-    String selection = PlaylistProvider.Items.PLAY_ORDER + " = ?";
+    String selection = PlaylistProvider.Items.PLAY_ORDER + " > ?";
     String[] selectionArgs = new String[1];
-    selectionArgs[0] = Integer.toString(entry.playOrder + 1);
+    selectionArgs[0] = Integer.toString(entry.playOrder);
+    String sort = PlaylistProvider.Items.PLAY_ORDER + " asc";
     PlaylistEntry playlistEntry = retrievePlaylistItem(selection,
         selectionArgs, null);
     if (playlistEntry == null) {

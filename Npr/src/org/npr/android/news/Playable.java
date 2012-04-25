@@ -27,12 +27,12 @@ public class Playable implements Parcelable {
   private static final String LOG_TAG = Playable.class.getName();
 
   private Playable(long id, String url, String title, boolean isStream,
-                   Class<?> activity, String activityData) {
+                   String activityName, String activityData) {
     setId(id);
     setUrl(url);
     setTitle(title);
     setIsStream(isStream);
-    setActivity(activity);
+    setActivityName(activityName);
     setActivityData(activityData);
   }
 
@@ -40,7 +40,7 @@ public class Playable implements Parcelable {
   private String url;
   private String title;
   private boolean isStream;
-  private Class<?> activity;
+  private String activityName;
   private String activityData;
 
   public static final String PLAYABLE_TYPE = "PLAYABLE_TYPE";
@@ -77,12 +77,12 @@ public class Playable implements Parcelable {
     isStream = stream;
   }
 
-  public Class<?> getActivity() {
-    return activity;
+  public String getActivityName() {
+    return activityName;
   }
 
-  public void setActivity(Class<?> activity) {
-    this.activity = activity;
+  public void setActivityName(String activityName) {
+    this.activityName = activityName;
   }
 
   public String getActivityData() {
@@ -104,7 +104,7 @@ public class Playable implements Parcelable {
     out.writeString(url);
     out.writeString(title);
     out.writeString(Boolean.toString(isStream));
-    out.writeString(activity.getName());
+    out.writeString(activityName);
     out.writeString(activityData);
   }
 
@@ -119,16 +119,12 @@ public class Playable implements Parcelable {
     }
   };
 
-  private Playable(Parcel in) {
+  public Playable(Parcel in) {
     id = in.readLong();
     url = in.readString();
     title = in.readString();
     isStream = Boolean.parseBoolean(in.readString());
-    try {
-      activity = Class.forName(in.readString());
-    } catch (ClassNotFoundException e) {
-      Log.e(LOG_TAG, "Class not found");
-    }
+    activityName = in.readString();
     activityData = in.readString();
   }
 
@@ -136,28 +132,28 @@ public class Playable implements Parcelable {
     public static Playable fromPlaylistEntry(PlaylistEntry playlistEntry) {
       return new Playable(playlistEntry.id, playlistEntry.url,
           playlistEntry.title, playlistEntry.isStream,
-          NewsStoryActivity.class, playlistEntry.storyID);
+          NewsStoryActivity.class.getName(), playlistEntry.storyID);
     }
 
     public static Playable fromPodcastItem(Podcast.Item item, String url,
                                            String title) {
       return new Playable(-1, item.getUrl(), item.getTitle(), true,
-          PodcastActivity.class, url + ' ' + title);
+          PodcastActivity.class.getName(), url + ' ' + title);
     }
 
     public static Playable fromStationStream(String stationId,
                                              Station.AudioStream stream) {
       return new Playable(-1, stream.getUrl(), stream.getTitle(), true,
-          StationDetailsActivity.class, stationId);
+          StationDetailsActivity.class.getName(), stationId);
     }
 
     public static Playable fromStory(Story story) {
       return new Playable(-1, story.getPlayableUrl(), story.getTitle(),
-          false, NewsStoryActivity.class, null);
+          false, null, null);
     }
 
-    public static Playable fromURL(String url, String title, Class<?> activity) {
-      return new Playable(-1, url, title, false, activity, null);
+    public static Playable fromURL(String url, String title) {
+      return new Playable(-1, url, title, false, null, null);
     }
   }
 }

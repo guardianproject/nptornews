@@ -245,7 +245,9 @@ public class Station {
       NodeList stationList = rootNode.getChildNodes();
       for (Node stationNode : new IterableNodeList(stationList)) {
         Station station = createNprmlStation(stationNode);
-        if (station != null) {
+        if (station != null &&
+            (station.getAudioStreams().size() > 0 ||
+             station.getPodcasts().size() > 0)) {
           result.add(station);
         }
       }

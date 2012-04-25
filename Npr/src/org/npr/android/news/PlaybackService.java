@@ -34,11 +34,7 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
-import org.npr.android.util.M3uParser;
-import org.npr.android.util.PlaylistParser;
-import org.npr.android.util.PlaylistRepository;
-import org.npr.android.util.PlsParser;
-import org.npr.android.util.Tracker;
+import org.npr.android.util.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -69,6 +65,9 @@ public class PlaybackService extends Service implements
   public static final String SERVICE_PLAY_ENTRY = SERVICE_PREFIX + "PLAY_ENTRY";
   public static final String SERVICE_TOGGLE_PLAY = SERVICE_PREFIX +
       "TOGGLE_PLAY";
+  public static final String SERVICE_RESUME_PLAYING = SERVICE_PREFIX +
+      "RESUME_PLAYING";
+  public static final String SERVICE_PAUSE = SERVICE_PREFIX + "PAUSE";
   public static final String SERVICE_BACK_30 = SERVICE_PREFIX + "BACK_30";
   public static final String SERVICE_FORWARD_30 = SERVICE_PREFIX + "FORWARD_30";
   public static final String SERVICE_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
@@ -80,16 +79,16 @@ public class PlaybackService extends Service implements
   public static final String SERVICE_CLEAR_PLAYER = SERVICE_PREFIX +
       "CLEAR_PLAYER";
 
-  public static final String EXTRA_ID = SERVICE_PREFIX + "ID";
-  public static final String EXTRA_TITLE = SERVICE_PREFIX + "TITLE";
   public static final String EXTRA_DOWNLOADED = SERVICE_PREFIX + "DOWNLOADED";
   public static final String EXTRA_DURATION = SERVICE_PREFIX + "DURATION";
   public static final String EXTRA_POSITION = SERVICE_PREFIX + "POSITION";
   public static final String EXTRA_SEEK_TO = SERVICE_PREFIX + "SEEK_TO";
   public static final String EXTRA_IS_PLAYING = SERVICE_PREFIX + "IS_PLAYING";
   public static final String EXTRA_IS_PREPARED = SERVICE_PREFIX + "IS_PREPARED";
+  public static final String EXTRA_KEEP_AUDIO_FOCUS = SERVICE_PREFIX + "KEEP_AUDIO_FOCUS";
 
   public static final String EXTRA_ERROR = SERVICE_PREFIX + "ERROR";
+
   public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback}
 
   private MediaPlayer mediaPlayer;
@@ -106,7 +105,7 @@ public class PlaybackService extends Service implements
   private PlaylistRepository playlist;
   private int startId;
   private String currentAction;
-  private Playable current = null;
+  private Playable currentPlayable = null;
   private List<String> playlistUrls;
 
   // Error handling
@@ -121,6 +120,8 @@ public class PlaybackService extends Service implements
   private Intent lastUpdateBroadcast;
   private int lastBufferPercent = 0;
   private Thread updateProgressThread;
+
+  private AudioManagerProxy audioManagerProxy;
 
   // Amount of time to rewind playback when resuming after call 
   private final static int RESUME_REWIND_TIME = 3000;
@@ -158,6 +159,8 @@ public class PlaybackService extends Service implements
     playlist = new PlaylistRepository(getApplicationContext(),
         getContentResolver());
 
+    audioManagerProxy = new AudioManagerProxy(getApplicationContext());
+
     Log.d(LOG_TAG, "Playback service created");
 
     telephonyManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
@@ -170,7 +173,7 @@ public class PlaybackService extends Service implements
           case TelephonyManager.CALL_STATE_RINGING:
             // Phone going off-hook or ringing, pause the player.
             if (isPlaying()) {
-              pause();
+              pause(false);
               isPausedInCall = true;
             }
             break;
@@ -198,7 +201,6 @@ public class PlaybackService extends Service implements
 
   @Override
   public void onStart(Intent intent, int startId) {
-    Log.d(LOG_TAG, "OnStart");
     super.onStart(intent, startId);
     Message message = serviceHandler.obtainMessage();
     message.arg1 = startId;
@@ -207,30 +209,43 @@ public class PlaybackService extends Service implements
   }
 
   protected void onHandleIntent(Intent intent) {
+    if (intent == null || intent.getAction() == null) {
+      Log.d(LOG_TAG, "Null intent received");
+      return;
+    }
     String action = intent.getAction();
+    Log.d(LOG_TAG, "Playback service action received: " + action);
     if (action.equals(SERVICE_PLAY_SINGLE) || action.equals(SERVICE_PLAY_ENTRY)) {
       currentAction = action;
-      current = intent.getParcelableExtra(Playable.PLAYABLE_TYPE);
+      currentPlayable = intent.getParcelableExtra(Playable.PLAYABLE_TYPE);
       seekToPosition = intent.getIntExtra(EXTRA_SEEK_TO, 0);
       playCurrent(0, 1);
     } else if (action.equals(SERVICE_TOGGLE_PLAY)) {
       if (isPlaying()) {
-        pause();
+        pause(false);
         // Get rid of the toggle intent, since we don't want it redelivered
         // on restart
         Intent emptyIntent = new Intent(intent);
         emptyIntent.setAction("");
         startService(emptyIntent);
-      } else if (current != null) {
-        if (isPrepared) {
-          play();
-        } else {
-          playCurrent(0, 1);
-        }
       } else {
-        currentAction = SERVICE_PLAY_ENTRY;
-        errorCount = 0;
-        playFirstUnreadEntry();
+        if (currentPlayable == null) {
+          currentAction = action;
+          currentPlayable = intent.getParcelableExtra(Playable.PLAYABLE_TYPE);
+        }
+        if (currentPlayable != null) {
+          resumePlaying();
+        } else {
+          currentAction = SERVICE_PLAY_ENTRY;
+          errorCount = 0;
+          playFirstUnreadEntry();
+        }
+      }
+    } else if (action.equals(SERVICE_RESUME_PLAYING)) {
+      resumePlaying();
+    } else if (action.equals(SERVICE_PAUSE)) {
+      if (isPlaying()) {
+        pause(intent.getBooleanExtra(EXTRA_KEEP_AUDIO_FOCUS, false));
       }
     } else if (action.equals(SERVICE_BACK_30)) {
       seekRelative(-30000);
@@ -261,12 +276,22 @@ public class PlaybackService extends Service implements
     return null;
   }
 
+  private void resumePlaying() {
+    if (currentPlayable != null) {
+      if (isPrepared) {
+        play();
+      } else {
+        playCurrent(0, 1);
+      }
+    }
+  }
+
   private boolean playCurrent(int startingErrorCount, int startingWaitTime) {
     errorCount = startingErrorCount;
     connectionErrorWaitTime = startingWaitTime;
     while (errorCount < ERROR_RETRY_COUNT) {
       try {
-        prepareThenPlay(current.getUrl(), current.isStream());
+        prepareThenPlay(currentPlayable.getUrl(), currentPlayable.isStream());
         return true;
       } catch (UnknownHostException e) {
         Log.w(LOG_TAG, "Unknown host in playCurrent");
@@ -275,7 +300,10 @@ public class PlaybackService extends Service implements
         Log.w(LOG_TAG, "Connect exception in playCurrent");
         handleConnectionError();
       } catch (IOException e) {
-        Log.e(LOG_TAG, "IOException on playlist entry " + current.getId(), e);
+        Log.e(LOG_TAG, "IOException on playlist entry " + currentPlayable.getId(), e);
+        incrementErrorCount();
+      } catch (IllegalStateException e) {
+        Log.e(LOG_TAG, "Illegal state exception trying to play entry " + currentPlayable.getId(), e);
         incrementErrorCount();
       }
     }
@@ -285,41 +313,48 @@ public class PlaybackService extends Service implements
 
   private void playNextEntry() {
     do {
-      long id = current.getId();
-      if (id != -1) {
-        current = playlist.getNextEntry(current.getId());
+      if (currentPlayable != null && currentPlayable.getId() != -1) {
+        currentPlayable = playlist.getNextEntry(currentPlayable.getId());
       } else {
-        current = playlist.getFirstUnreadEntry();
+        currentPlayable = playlist.getFirstUnreadEntry();
       }
-    } while (current != null && !playCurrent(0, 1));
+    } while (currentPlayable != null && !playCurrent(0, 1));
   }
 
   private void playPreviousEntry() {
     do {
-      current = playlist.getPreviousEntry(current.getId());
-    } while (current != null && !playCurrent(0, 1));
+      if (currentPlayable != null && currentPlayable.getId() != -1) {
+        currentPlayable = playlist.getPreviousEntry(currentPlayable.getId());
+      } else {
+        currentPlayable = playlist.getFirstUnreadEntry();
+      }
+    } while (currentPlayable != null && !playCurrent(0, 1));
   }
 
   private void playFirstUnreadEntry() {
     do {
-      current = playlist.getFirstUnreadEntry();
-    } while (current != null && !playCurrent(0, 1));
+      currentPlayable = playlist.getFirstUnreadEntry();
+    } while (currentPlayable != null && !playCurrent(0, 1));
 
-    if (current == null) {
+    if (currentPlayable == null) {
       stopSelfResult(startId);
     }
   }
 
   private void finishEntryAndPlayNext() {
-    if (current.getId() >= 0 && !markedRead) {
-      playlist.markAsRead(current.getId());
+    if (currentPlayable != null && currentPlayable.getId() >= 0 && !markedRead) {
+      playlist.markAsRead(currentPlayable.getId());
     }
 
     do {
-      current = playlist.getNextEntry(current.getId());
-    } while (current != null && !playCurrent(0, 1));
+      if (currentPlayable == null) {
+        currentPlayable = playlist.getFirstUnreadEntry();
+      } else {
+        currentPlayable = playlist.getNextEntry(currentPlayable.getId());
+      }
+    } while (currentPlayable != null && !playCurrent(0, 1));
 
-    if (current == null) {
+    if (currentPlayable == null) {
       stopSelfResult(startId);
     }
   }
@@ -399,16 +434,21 @@ public class PlaybackService extends Service implements
   }
 
   synchronized private void play() {
-    if (!isPrepared || current == null) {
+    if (!isPrepared || currentPlayable == null) {
       Log.e(LOG_TAG, "play - not prepared");
       return;
     }
-    Log.d(LOG_TAG, "play " + current.getId());
+    Log.d(LOG_TAG, "play " + currentPlayable.getId());
+
+    if (!audioManagerProxy.getAudioFocus()) {
+      Log.d(LOG_TAG, "Unable to get audio focus, so stop");
+      return;
+    }
 
     mediaPlayer.start();
     mediaPlayerHasStarted = true;
 
-    CharSequence contentText = current.getTitle();
+    CharSequence contentText = currentPlayable.getTitle();
     Notification notification =
         new Notification(R.drawable.stat_notify_musicplayer,
             contentText,
@@ -417,15 +457,23 @@ public class PlaybackService extends Service implements
         | Notification.FLAG_ONGOING_EVENT;
     Context context = getApplicationContext();
     CharSequence title = getString(R.string.app_name);
-    Intent notificationIntent;
-    if (current.getActivityData() != null) {
-      notificationIntent = new Intent(this, current.getActivity());
+
+    Class<?> notificationActivity;
+    if (currentPlayable.getActivityName() != null) {
+      try {
+        notificationActivity = Class.forName(currentPlayable.getActivityName());
+      } catch (ClassNotFoundException e) {
+        notificationActivity = NewsListActivity.class;
+      }
+    } else {
+      notificationActivity = NewsListActivity.class;
+    }
+    Intent notificationIntent = new Intent(this, notificationActivity);
+    if (currentPlayable.getActivityData() != null) {
       notificationIntent.putExtra(Constants.EXTRA_ACTIVITY_DATA,
-          current.getActivityData());
+          currentPlayable.getActivityData());
       notificationIntent.putExtra(Constants.EXTRA_DESCRIPTION,
           R.string.msg_main_subactivity_nowplaying);
-    } else {
-      notificationIntent = new Intent(this, NewsListActivity.class);
     }
     notificationIntent.setAction(Intent.ACTION_VIEW);
     notificationIntent.addCategory(Intent.CATEGORY_DEFAULT);
@@ -441,31 +489,43 @@ public class PlaybackService extends Service implements
       getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
     }
     lastChangeBroadcast = new Intent(SERVICE_CHANGE_NAME);
-    lastChangeBroadcast.putExtra(EXTRA_TITLE, current.getTitle());
-    lastChangeBroadcast.putExtra(EXTRA_ID, current.getId());
+    lastChangeBroadcast.putExtra(Playable.PLAYABLE_TYPE, currentPlayable);
     getApplicationContext().sendStickyBroadcast(lastChangeBroadcast);
 
-    if (current != null && current.getUrl() != null) {
-      Tracker.PlayEvent e = new Tracker.PlayEvent(current.getUrl());
+    if (currentPlayable != null && currentPlayable.getUrl() != null) {
+      Tracker.PlayEvent e = new Tracker.PlayEvent(currentPlayable.getUrl());
       Tracker.instance(getApplication()).trackLink(e);
     }
   }
 
-  synchronized private void pause() {
+  synchronized private void pause(boolean maintainFocus) {
     Log.d(LOG_TAG, "pause");
     if (isPrepared) {
-      mediaPlayer.pause();
+      if (currentPlayable != null && currentPlayable.isStream()) {
+        isPrepared = false;
+        if (proxy != null) {
+          proxy.stop();
+          proxy = null;
+        }
+        mediaPlayer.stop();
+      } else {
+        mediaPlayer.pause();
+      }
+    }
+    if (!maintainFocus) {
+      audioManagerProxy.releaseAudioFocus();
     }
     notificationManager.cancel(NOTIFICATION_ID);
 
-    if (current != null) {
-      Tracker.PauseEvent e = new Tracker.PauseEvent(current.getUrl());
+    if (currentPlayable != null) {
+      Tracker.PauseEvent e = new Tracker.PauseEvent(currentPlayable.getUrl());
       Tracker.instance(getApplication()).trackLink(e);
     }
   }
 
   synchronized private void stop() {
     Log.d(LOG_TAG, "stop");
+    audioManagerProxy.releaseAudioFocus();
     if (isPrepared) {
       isPrepared = false;
       if (proxy != null) {
@@ -591,7 +651,9 @@ public class PlaybackService extends Service implements
       if (!markedRead) {
         if (seekToPosition > duration / 10) {
           markedRead = true;
-          playlist.markAsRead(current.getId());
+          if (playlist != null && currentPlayable != null) {
+            playlist.markAsRead(currentPlayable.getId());
+          }
         }
       }
 
@@ -628,8 +690,8 @@ public class PlaybackService extends Service implements
     }
 
     seekToPosition = 0;
-    if (current != null) {
-      Tracker.StopEvent e = new Tracker.StopEvent(current.getUrl());
+    if (currentPlayable != null) {
+      Tracker.StopEvent e = new Tracker.StopEvent(currentPlayable.getUrl());
       Tracker.instance(getApplication()).trackLink(e);
     }
 
@@ -641,7 +703,7 @@ public class PlaybackService extends Service implements
         errorCount = 0;
         while (errorCount < ERROR_RETRY_COUNT) {
           try {
-            prepareThenPlay(url, current.isStream());
+            prepareThenPlay(url, currentPlayable.isStream());
             successfulPlay = true;
             break;
           } catch (UnknownHostException e) {
@@ -692,7 +754,7 @@ public class PlaybackService extends Service implements
       getApplicationContext().sendBroadcast(intent);
 
       // If a stream, increment since it could be bad
-      if (current.isStream()) {
+      if (currentPlayable.isStream()) {
         errorCount++;
       }
 

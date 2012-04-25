@@ -19,6 +19,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Html;
@@ -486,7 +487,20 @@ public class NewsStoryActivity extends RootActivity implements
   private class PlaybackChangedReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
-      Long playlistId = intent.getLongExtra(PlaybackService.EXTRA_ID, -1);
+      Long playlistId = -1L;
+      Playable playable = null;
+      try {
+        Context serviceContext = context.createPackageContext(context.getPackageName(),
+            Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+        Bundle bundle = intent.getExtras();
+        bundle.setClassLoader(serviceContext.getClassLoader());
+        playable = bundle.getParcelable(Playable.PLAYABLE_TYPE);
+      } catch (PackageManager.NameNotFoundException e)
+      {
+      }
+      if (playable != null) {
+        playlistId = playable.getId();
+      }
       if (playlistId != -1) {
         PlaylistEntry pe = playlistRepository.getPlaylistItemFromId
             (playlistId);

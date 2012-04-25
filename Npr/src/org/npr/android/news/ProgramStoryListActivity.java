@@ -75,7 +75,6 @@ public class ProgramStoryListActivity extends NewsListActivity {
   private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
     @Override
     public void storiesLoaded() {
-      bannerView.startCloseTimer();
       if (loadAll) {
         loadAll = false;
         PlaylistRepository playlistRepository =
