@@ -118,7 +118,9 @@ public class Book extends ApiElement {
         if (id != null) {
           Book book = books.get(id);
           if (book != null) {
-            book.promoArt = promoArts.get(book.promoArt);
+            if (book.promoArt != null) {
+              book.promoArt = promoArts.get(book.promoArt);
+            }
             result.add(book);
           }
         }
