@@ -15,6 +15,19 @@
 
 package org.npr.android.news;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.npr.android.util.DisplayUtils;
+import org.npr.android.util.FavoriteStationEntry;
+import org.npr.android.util.FavoriteStationsProvider;
+import org.npr.android.util.FavoriteStationsRepository;
+import org.npr.android.util.StationCache;
+import org.npr.android.util.Tracker;
+import org.npr.android.util.Tracker.StationListMeasurement;
+import org.npr.api.ApiConstants;
+import org.npr.api.Station;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -33,15 +46,14 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.*;
+import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import org.npr.android.util.*;
-import org.npr.android.util.Tracker.StationListMeasurement;
-import org.npr.api.ApiConstants;
-import org.npr.api.Station;
-
-import java.util.HashMap;
-import java.util.Map;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 public class StationListActivity extends TitleActivity implements
     OnItemClickListener, AdapterView.OnItemLongClickListener, OnClickListener, View.OnKeyListener {
@@ -169,7 +181,7 @@ public class StationListActivity extends TitleActivity implements
   private void loadFromFavorites() {
     listInitThread = new Thread(new Runnable() {
       public void run() {
-        Cursor cursor = managedQuery(FavoriteStationsProvider.CONTENT_URI,
+        Cursor cursor = getApplicationContext().getContentResolver().query(FavoriteStationsProvider.CONTENT_URI,
             null, null, null, null);
         listAdapter.initializeList(cursor);
         cursor.close();

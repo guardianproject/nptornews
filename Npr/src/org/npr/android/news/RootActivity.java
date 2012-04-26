@@ -35,13 +35,13 @@ import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
-import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
@@ -62,6 +62,7 @@ public abstract class RootActivity extends Activity implements
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+    requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
     super.onCreate(savedInstanceState);
 
     setContentView(R.layout.main);
@@ -80,6 +81,10 @@ public abstract class RootActivity extends Activity implements
     ImageButton mainSearchButton =
         (ImageButton) findViewById(R.id.MainSearchButton);
     mainSearchButton.setOnClickListener(this);
+    
+    ImageButton mainNavButton =
+        (ImageButton) findViewById(R.id.MainNavButton);
+    mainNavButton.setOnClickListener(this);
 
     playlistView = new PlaylistView(this);
     titleFrame.addView(playlistView,
@@ -105,10 +110,12 @@ public abstract class RootActivity extends Activity implements
 
   protected void startIndeterminateProgressIndicator() {
     progressIndicator.setVisibility(View.VISIBLE);
+    // setSupportProgressBarIndeterminateVisibility(true); // Once we move to a proper action bar
   }
 
   protected void stopIndeterminateProgressIndicator() {
     progressIndicator.setVisibility(View.INVISIBLE);
+    // setSupportProgressBarIndeterminateVisibility(false); // Once we move to a proper action bar
   }
 
 
@@ -234,15 +241,6 @@ public abstract class RootActivity extends Activity implements
   }
 
   @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    showHideNavigationMenu();
-    // We're showing our own menu, so return false to keep the system one
-    // from being displayed
-    return false;
-  }
-
-
-  @Override
   public void onCreateContextMenu(ContextMenu menu, View view,
                                   ContextMenu.ContextMenuInfo menuInfo) {
     Log.d(LOG_TAG, "Creating context menu for list items");
@@ -304,6 +302,9 @@ public abstract class RootActivity extends Activity implements
     switch (v.getId()) {
       case R.id.MainSearchButton:
         startActivityWithoutAnimation(new Intent(this, SearchActivity.class));
+        break;
+      case R.id.MainNavButton:
+        showHideNavigationMenu();
         break;
     }
   }

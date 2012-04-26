@@ -218,8 +218,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     clearPlaylist = (Button) findViewById(R.id.clear_playlist);
     clearPlaylist.setOnClickListener(this);
 
-    Cursor cursor = context.getContentResolver().query(PlaylistProvider
-        .CONTENT_URI, null, null, null, PlaylistProvider.Items.PLAY_ORDER);
+    Cursor cursor = queryPlaylist();
     playlistAdapter = new PlaylistAdapter(context, cursor);
 
     changeReceiver = new PlaybackChangeReceiver();
@@ -273,10 +272,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     refreshList();
   }
 
+  private Cursor queryPlaylist()
+  {
+    Cursor cursor = context.getContentResolver().query(PlaylistProvider
+        .CONTENT_URI, null, null, null, PlaylistProvider.Items.PLAY_ORDER);
+    return cursor;
+  }
 
   private void refreshList() {
     if (playlistAdapter != null) {
-      playlistAdapter.getCursor().requery();
+      playlistAdapter.changeCursor( queryPlaylist() );
       playlistAdapter.notifyDataSetChanged();
     }
   }

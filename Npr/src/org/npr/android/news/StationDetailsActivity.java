@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.Html;
 import android.util.Log;
 import android.util.TypedValue;
@@ -46,6 +47,8 @@ public class StationDetailsActivity extends RootActivity implements
   private String stationId;
   private Station station;
   private boolean isFavorite;
+  
+  private Handler m_uiHandler;
 
   private class ListItem {
     private final AudioStream stream;
@@ -188,11 +191,27 @@ public class StationDetailsActivity extends RootActivity implements
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
     if (getIntent().hasExtra(Constants.EXTRA_STATION_ID)) {
       stationId = getIntent().getStringExtra(Constants.EXTRA_STATION_ID);
     } else if (getIntent().hasExtra(Constants.EXTRA_ACTIVITY_DATA)) {
       stationId = getIntent().getStringExtra(Constants.EXTRA_ACTIVITY_DATA);
     }
+
+    m_uiHandler = new Handler();
+    
+    new Thread() {
+      @Override
+      public void run()
+      {
+        setupStation();
+      }
+    }.start();
+  }
+  
+  private void setupStation()
+  {
     station = StationCache.getStation(stationId);
 
     String selection = FavoriteStationsProvider.Items.STATION_ID + " = ?";
@@ -206,8 +225,6 @@ public class StationDetailsActivity extends RootActivity implements
     c.close();
 
     if (station == null) {
-      // Must call super or throws exception
-      super.onCreate(savedInstanceState);
       Log.d(LOG_TAG, "Couldn't get station. Notifying user.");
       Toast.makeText(this, R.string.msg_station_not_found, Toast.LENGTH_SHORT);
       if (isFavorite) {
@@ -220,44 +237,47 @@ public class StationDetailsActivity extends RootActivity implements
       finish();
       return;
     }
+    
+    m_uiHandler.post( new Runnable() {
+      @Override
+      public void run() {
+        ViewGroup container = (ViewGroup) findViewById(R.id.TitleContent);
+        ViewGroup.inflate(StationDetailsActivity.this, R.layout.station_details, container);
 
-    super.onCreate(savedInstanceState);
-
-    ViewGroup container = (ViewGroup) findViewById(R.id.TitleContent);
-    ViewGroup.inflate(this, R.layout.station_details, container);
-
-    ArrayList<ListItem> listItems = new ArrayList<ListItem>();
-    listItems.add(new ListItem(station.getName()));
-    listItems.add(new ListItem("Favorites")); // string is a placeholder
-    if (station.getAudioStreams().size() > 0) {
-      listItems.add(new ListItem(getString(R.string.msg_station_streams) +
-          " (" + station.getAudioStreams().size() + ")"));
-      for (AudioStream stream : station.getAudioStreams()) {
-        if (stream.getTitle() == null) {
-          listItems.add(new ListItem(new AudioStream(
-              stream.getUrl(),
-              String.format(getString(R.string.format_default_station_name),
-                  station.getName()
-                  )
-          )));
-        } else {
-          listItems.add(new ListItem(stream));
+        ArrayList<ListItem> listItems = new ArrayList<ListItem>();
+        listItems.add(new ListItem(station.getName()));
+        listItems.add(new ListItem("Favorites")); // string is a placeholder
+        if (station.getAudioStreams().size() > 0) {
+          listItems.add(new ListItem(getString(R.string.msg_station_streams) +
+              " (" + station.getAudioStreams().size() + ")"));
+          for (AudioStream stream : station.getAudioStreams()) {
+            if (stream.getTitle() == null) {
+              listItems.add(new ListItem(new AudioStream(
+                  stream.getUrl(),
+                  String.format(getString(R.string.format_default_station_name),
+                      station.getName()
+                      )
+              )));
+            } else {
+              listItems.add(new ListItem(stream));
+            }
+          }
         }
-      }
-    }
-    if (station.getPodcasts().size() > 0) {
-      listItems.add(new ListItem(getString(R.string.msg_station_podcasts) +
-          " (" + station.getPodcasts().size() + ")"));
-      for (Podcast podcast : station.getPodcasts()) {
-        listItems.add(new ListItem(podcast));
-      }
-    }
+        if (station.getPodcasts().size() > 0) {
+          listItems.add(new ListItem(getString(R.string.msg_station_podcasts) +
+              " (" + station.getPodcasts().size() + ")"));
+          for (Podcast podcast : station.getPodcasts()) {
+            listItems.add(new ListItem(podcast));
+          }
+        }
 
-    ListView streamList = (ListView) findViewById(R.id.station_details_list);
-    streamList.setOnItemClickListener(this);
+        ListView streamList = (ListView) findViewById(R.id.station_details_list);
+        streamList.setOnItemClickListener(StationDetailsActivity.this);
 
-    listAdapter = new ListItemAdapter(this, listItems);
-    streamList.setAdapter(listAdapter);
+        listAdapter = new ListItemAdapter(StationDetailsActivity.this, listItems);
+        streamList.setAdapter(listAdapter);
+      }
+    });
   }
 
   @Override
