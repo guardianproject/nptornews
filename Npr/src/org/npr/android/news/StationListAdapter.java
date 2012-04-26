@@ -15,15 +15,12 @@
 
 package org.npr.android.news;
 
-import android.content.Context;
-import android.database.Cursor;
-import android.text.Html;
-import android.util.Log;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.TextView;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.http.client.ClientProtocolException;
 import org.npr.android.util.FavoriteStationEntry;
 import org.npr.android.util.FavoriteStationsProvider;
@@ -35,10 +32,14 @@ import org.npr.api.Station.StationFactory;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import android.content.Context;
+import android.database.Cursor;
+import android.text.Html;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.TextView;
 
 public class StationListAdapter extends ArrayAdapter<Station> {
   private static final String LOG_TAG = StationListAdapter.class.getName();

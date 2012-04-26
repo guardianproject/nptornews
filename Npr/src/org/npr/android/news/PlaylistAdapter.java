@@ -29,6 +29,7 @@ import android.widget.TextView;
 import org.npr.android.util.PlaylistProvider;
 
 public class PlaylistAdapter extends CursorAdapter {
+  @SuppressWarnings("unused")
   private static final String LOG_TAG = PlaylistAdapter.class.getName();
   private String activeId;
 

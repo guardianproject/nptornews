@@ -75,7 +75,6 @@ public class AllProgramsActivity extends TitleActivity implements
   };
 
 
-  @SuppressWarnings("unchecked")
   protected int constructList() {
     try {
       nowPlayingIDs = PublicBroadcastingClient.getNowPlayingIds();

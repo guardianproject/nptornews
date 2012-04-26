@@ -115,7 +115,7 @@ public class WorkspaceView extends ViewGroup {
 
     paint = new Paint();
     paint.setDither(false);
-    touchSlop = ViewConfiguration.getTouchSlop();
+    touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
   }
 
 

@@ -15,8 +15,14 @@
 
 package org.npr.android.news;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import org.npr.android.util.PlaylistEntry;
+import org.npr.android.util.PlaylistRepository;
+import org.npr.api.ApiConstants;
+
 import android.app.Activity;
-import android.app.ActivityGroup;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -41,21 +47,12 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import org.npr.android.util.PlaylistEntry;
-import org.npr.android.util.PlaylistRepository;
-import org.npr.api.ApiConstants;
-
-import com.crittercism.app.Crittercism;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
 /**
  * @author mfrederick@google.com (Michael Frederick)
  *         A base class for all Activities that want to display the default layout,
  *         including the PlaylistView.
  */
-public abstract class RootActivity extends ActivityGroup implements
+public abstract class RootActivity extends Activity implements
   Trackable, Refreshable, OnClickListener {
   private static final String LOG_TAG = RootActivity.class.getName();
   private NavigationView navigationView;
@@ -76,8 +73,8 @@ public abstract class RootActivity extends ActivityGroup implements
     ViewGroup titleFrame = (ViewGroup) findViewById(R.id.TitleContent);
     navigationView = new NavigationView(this);
     titleFrame.addView(navigationView,
-        new ViewGroup.LayoutParams(LayoutParams.FILL_PARENT,
-            LayoutParams.FILL_PARENT));
+        new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,
+            LayoutParams.MATCH_PARENT));
     navigationView.setVisibility(View.GONE);
 
     ImageButton mainSearchButton =
@@ -86,8 +83,8 @@ public abstract class RootActivity extends ActivityGroup implements
 
     playlistView = new PlaylistView(this);
     titleFrame.addView(playlistView,
-        new ViewGroup.LayoutParams(LayoutParams.FILL_PARENT,
-            LayoutParams.FILL_PARENT));
+        new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,
+            LayoutParams.MATCH_PARENT));
 
     progressIndicator =
         (ProgressBar) findViewById(R.id.WindowProgressIndicator);

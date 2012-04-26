@@ -111,8 +111,8 @@ public class NewsStoryActivity extends RootActivity implements
     inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
     FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
-        FrameLayout.LayoutParams.FILL_PARENT,
-        FrameLayout.LayoutParams.FILL_PARENT
+        FrameLayout.LayoutParams.MATCH_PARENT,
+        FrameLayout.LayoutParams.MATCH_PARENT
     );
     layout.setMargins(0, 0, 0, DisplayUtils.convertToDIP(this, 95));
     ((ViewGroup) findViewById(R.id.TitleContent)).addView(workspace, layout);

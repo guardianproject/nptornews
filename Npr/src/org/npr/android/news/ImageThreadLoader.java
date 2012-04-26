@@ -46,6 +46,7 @@ import java.util.HashMap;
 public class ImageThreadLoader {
   private static final String LOG_TAG = ImageThreadLoader.class.getName();
 
+  private final Context context;
   // Global cache of images.
   private final Cache cache;
 
@@ -62,9 +63,10 @@ public class ImageThreadLoader {
   private final QueueRunner runner = new QueueRunner();
 
 
-  private ImageThreadLoader(Cache cache) {
+  private ImageThreadLoader(Cache cache,Context context) {
     thread = new Thread(runner);
     this.cache = cache;
+    this.context = context;
     queue = new ArrayList<QueueItem>();
   }
 
@@ -74,8 +76,8 @@ public class ImageThreadLoader {
    * memory to store the images and garbage collects them rapidly.
    * @return an ImageThreadLoader that uses memory for caching
    */
-  public static ImageThreadLoader getInMemoryInstance() {
-    return new ImageThreadLoader(new MemoryCache());
+  public static ImageThreadLoader getInMemoryInstance(Context context) {
+    return new ImageThreadLoader(new MemoryCache(),context);
   }
 
   /**
@@ -86,7 +88,7 @@ public class ImageThreadLoader {
    * @return an ImageThreadLoader that uses on-disk cache
    */
   public static ImageThreadLoader getOnDiskInstance(Context context) {
-    return new ImageThreadLoader(new DiskCache(context));
+    return new ImageThreadLoader(new DiskCache(context),context);
   }
 
 
@@ -133,7 +135,7 @@ public class ImageThreadLoader {
           @Override
           public void run() {
             if (item.listener != null) {
-              item.listener.imageLoaded(new BitmapDrawable(bmp));
+              item.listener.imageLoaded(new BitmapDrawable(context.getResources(),bmp));
             }
           }
         });
@@ -153,7 +155,7 @@ public class ImageThreadLoader {
             // re-run the network load or something.
             Bitmap ref = cache.get(item.url);
             if (ref != null) {
-              item.listener.imageLoaded(new BitmapDrawable(ref));
+              item.listener.imageLoaded(new BitmapDrawable(context.getResources(),ref));
             } else {
               Log.w(LOG_TAG, "Image loader lost the image to GC.");
             }
@@ -177,7 +179,7 @@ public class ImageThreadLoader {
     if (cache.containsKey(uri)) {
       Bitmap ref = cache.get(uri);
       if (ref != null) {
-        return new BitmapDrawable(ref);
+        return new BitmapDrawable(context.getResources(),ref);
       }
     }
 

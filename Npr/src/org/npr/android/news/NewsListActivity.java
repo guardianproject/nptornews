@@ -212,7 +212,7 @@ public class NewsListActivity extends TitleActivity implements
     listView.setAdapter(listAdapter);
 
     // Gesture detection
-    gestureDetector = new GestureDetector(
+    gestureDetector = new GestureDetector(getApplicationContext(),
         new ListItemGestureListener(listView, handler)
     );
     View.OnTouchListener gestureListener = new View.OnTouchListener() {

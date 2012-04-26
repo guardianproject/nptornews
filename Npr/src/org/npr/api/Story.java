@@ -65,7 +65,6 @@ public class Story extends ApiElement {
   private final List<Parent> parents;
 
   public static class Thumbnail {
-    @SuppressWarnings("unused")
     private final String medium;
 
     public Thumbnail(String medium) {
@@ -286,6 +285,7 @@ public class Story extends ApiElement {
     private final String type;
     private final boolean isPrimary;
     private final String title;
+    @SuppressWarnings("unused")
     private final String htmlLink;
     private final String apiLink;
 

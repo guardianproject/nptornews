@@ -136,20 +136,17 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   private int bannerHeight;
   private int screenHeight;
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public BannerView(Context context) {
     super(context);
     this.context = context;
     init();
   }
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public BannerView(Context context, AttributeSet attrs) {
     super(context, attrs);
     this.context = context;
     init();
   }
-
 
   @Override
   protected void onDetachedFromWindow() {
@@ -218,7 +215,7 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     TextView left = new TextView(context);
     LayoutParams textLayout = new LayoutParams(
         dim53,
-        LayoutParams.FILL_PARENT,
+        LayoutParams.MATCH_PARENT,
         1
     );
     textLayout.gravity = Gravity.CENTER;

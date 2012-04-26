@@ -142,19 +142,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     }
   };
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context) {
     super(context);
     this.context = context;
   }
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context, AttributeSet attrs) {
     super(context, attrs);
     this.context = context;
   }
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context, AttributeSet attrs, int defStyle) {
     super(context, attrs, defStyle);
     this.context = context;
@@ -186,7 +183,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     drawer = (SlidingDrawer) findViewById(R.id.drawer);
     drawer.setOnDrawerOpenListener(this);
     drawer.setOnDrawerCloseListener(this);
-    touchSlop = ViewConfiguration.getTouchSlop();
+    touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
     handle = (RelativeLayout) findViewById(R.id.handle);
 
     playerContracted = (RelativeLayout) findViewById(R.id.player_contracted);
@@ -259,7 +256,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     listView.setDropListener(this);
 
     // Gesture detection
-    gestureDetector = new GestureDetector(
+    gestureDetector = new GestureDetector(getContext(),
         new ListItemGestureListener(listView, handler)
     );
     View.OnTouchListener gestureListener = new View.OnTouchListener() {
@@ -565,7 +562,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
   @Override
   public void onDrawerOpened() {
-    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
+    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
         DisplayUtils.convertToDIP(context, 150)));
     playerContracted.setVisibility(View.GONE);
     playerExpanded.setVisibility(View.VISIBLE);
@@ -574,7 +571,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
   @Override
   public void onDrawerClosed() {
-    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
+    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
         DisplayUtils.convertToDIP(context, 95)));
     playerContracted.setVisibility(View.VISIBLE);
     playerExpanded.setVisibility(View.GONE);
