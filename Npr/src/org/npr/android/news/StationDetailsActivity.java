@@ -276,6 +276,8 @@ public class StationDetailsActivity extends RootActivity implements
 
         listAdapter = new ListItemAdapter(StationDetailsActivity.this, listItems);
         streamList.setAdapter(listAdapter);
+        
+        bringPlayerNavToFront();
       }
     });
   }

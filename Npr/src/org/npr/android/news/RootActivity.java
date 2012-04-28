@@ -142,6 +142,11 @@ public abstract class RootActivity extends Activity implements
 
     }
 
+    bringPlayerNavToFront();
+  }
+  
+  protected void bringPlayerNavToFront()
+  {
     // Navigation on top of player, player on top of content
     playlistView.bringToFront();
     navigationView.bringToFront();
