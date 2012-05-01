@@ -74,8 +74,8 @@ public abstract class RootActivity extends Activity implements
     ViewGroup titleFrame = (ViewGroup) findViewById(R.id.TitleContent);
     navigationView = new NavigationView(this);
     titleFrame.addView(navigationView,
-        new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,
-            LayoutParams.MATCH_PARENT));
+        new ViewGroup.LayoutParams(LayoutParams.FILL_PARENT,
+            LayoutParams.FILL_PARENT));
     navigationView.setVisibility(View.GONE);
 
     ImageButton mainSearchButton =
@@ -88,8 +88,8 @@ public abstract class RootActivity extends Activity implements
 
     playlistView = new PlaylistView(this);
     titleFrame.addView(playlistView,
-        new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,
-            LayoutParams.MATCH_PARENT));
+        new ViewGroup.LayoutParams(LayoutParams.FILL_PARENT,
+            LayoutParams.FILL_PARENT));
 
     progressIndicator =
         (ProgressBar) findViewById(R.id.WindowProgressIndicator);

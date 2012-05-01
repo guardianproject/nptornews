@@ -63,7 +63,7 @@ public class PlaylistAdapter extends CursorAdapter {
       playlistItemState.setImageResource(R.drawable.speaker_icon);
     } else {
       view.setBackgroundDrawable(null);
-      view.setBackgroundColor(android.R.color.transparent);
+      view.setBackgroundColor(context.getResources().getColor(android.R.color.transparent));
       String isRead = cursor.getString(
         cursor.getColumnIndex(PlaylistProvider.Items.IS_READ));
       if (isRead.equals("0")) {

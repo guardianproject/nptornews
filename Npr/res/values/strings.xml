@@ -2,7 +2,7 @@
 <resources>
   <string name="app_name">NPR News</string>
 
-  <string name="msg_load_more">Load more stories...</string>
+  <string name="msg_load_more">Load more stories…</string>
 
   <string name="msg_refresh">Refresh</string>
 

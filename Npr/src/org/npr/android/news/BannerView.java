@@ -230,7 +230,7 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
     TextView left = new TextView(context);
     LayoutParams textLayout = new LayoutParams(
         dim53,
-        LayoutParams.MATCH_PARENT,
+        LayoutParams.FILL_PARENT,
         1
     );
     textLayout.gravity = Gravity.CENTER;

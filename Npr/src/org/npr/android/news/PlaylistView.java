@@ -567,7 +567,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
   @Override
   public void onDrawerOpened() {
-    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
         DisplayUtils.convertToDIP(context, 150)));
     playerContracted.setVisibility(View.GONE);
     playerExpanded.setVisibility(View.VISIBLE);
@@ -576,7 +576,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
 
   @Override
   public void onDrawerClosed() {
-    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+    handle.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.FILL_PARENT,
         DisplayUtils.convertToDIP(context, 95)));
     playerContracted.setVisibility(View.VISIBLE);
     playerExpanded.setVisibility(View.GONE);

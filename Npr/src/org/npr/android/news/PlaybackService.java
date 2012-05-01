@@ -471,6 +471,14 @@ public class PlaybackService extends Service implements
   private void presentPlayingNotification()
   {
     CharSequence contentText = currentPlayable.getTitle();
+    Notification notification =
+        new Notification(R.drawable.stat_notify_musicplayer,
+            contentText,
+            System.currentTimeMillis());
+    notification.flags = Notification.FLAG_NO_CLEAR
+        | Notification.FLAG_ONGOING_EVENT;
+    Context context = getApplicationContext();
+    CharSequence title = getString(R.string.app_name);
 
     Class<?> notificationActivity;
     if (currentPlayable.getActivityName() != null) {
@@ -482,33 +490,19 @@ public class PlaybackService extends Service implements
     } else {
       notificationActivity = NewsListActivity.class;
     }
-    
-    Context context = getApplicationContext();
-    CharSequence title = getString(R.string.app_name);
-    Intent notificationIntent;
+    Intent notificationIntent = new Intent(this, notificationActivity);
     if (currentPlayable.getActivityData() != null) {
-      notificationIntent = new Intent(this, notificationActivity);
       notificationIntent.putExtra(Constants.EXTRA_ACTIVITY_DATA,
           currentPlayable.getActivityData());
       notificationIntent.putExtra(Constants.EXTRA_DESCRIPTION,
           R.string.msg_main_subactivity_nowplaying);
-    } else {
-      notificationIntent = new Intent(this, NewsListActivity.class);
     }
     notificationIntent.setAction(Intent.ACTION_VIEW);
     notificationIntent.addCategory(Intent.CATEGORY_DEFAULT);
     notificationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     PendingIntent contentIntent = PendingIntent.getActivity(context, 0,
         notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-    Notification.Builder notBuilder = new Notification.Builder(this);
-    notBuilder.setSmallIcon(R.drawable.stat_notify_musicplayer);
-    notBuilder.setContentTitle(title);
-    notBuilder.setContentText(contentText);
-    notBuilder.setContentIntent(contentIntent);
-    notBuilder.setOngoing(true);
-    notBuilder.setWhen(System.currentTimeMillis());
-    Notification notification = notBuilder.getNotification();
+    notification.setLatestEventInfo(context, title, contentText, contentIntent);
 
     startForeground(NOTIFICATION_ID, notification);
   }
