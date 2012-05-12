@@ -20,6 +20,8 @@
       android:layout_marginRight="20dip"
       android:src="@drawable/search_button"
       android:background="@android:color/transparent"
+      android:contentDescription="@string/acd_search_button"
+     
       />
 
     <ImageButton
