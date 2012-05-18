@@ -496,6 +496,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
         if (isPlaying) {
           if (storedPlayable == null || !storedPlayable.isStream()) {
             playPauseButton.setImageResource(R.drawable.pause_button_normal);
+          playPauseButton.setContentDescription(getResources().getString(R.string.acd_pause_button));
             contractedPlayButton.setImageResource(R.drawable.pause_button_normal);
           } else {
             playPauseButton.setImageResource(R.drawable.stop_button_normal);
@@ -504,7 +505,8 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
           playPauseShowsPlay = false;
         } else {
           playPauseButton.setImageResource(R.drawable.play_button_normal);
-          contractedPlayButton.setImageResource(R.drawable.play_button_normal);
+          playPauseButton.setContentDescription(getResources().getString(R.string.acd_play_button));
+          contractedPlayButton.setImageResource(R.drawable.play_button_normal);          
           playPauseShowsPlay = true;
         }
       }

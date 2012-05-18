@@ -11,12 +11,16 @@
       android:layout_weight="1"
       android:hint="@string/msg_search_hint"
       android:imeOptions="actionSearch"
-      android:inputType="text"/>
+      android:inputType="text"
+      android:nextFocusRight="@+id/search_go_button"
+      />
     <ImageButton
       android:id="@+id/search_go_button"
       android:background="@drawable/btn_search_dialog"
       android:src="@drawable/ic_btn_search"
       android:layout_width="wrap_content"
       android:layout_height="fill_parent"
+      android:contentDescription="@string/acd_search_button"
+      android:nextFocusLeft="@+id/SearchText"
       />
 </LinearLayout>

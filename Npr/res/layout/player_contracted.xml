@@ -19,7 +19,8 @@
     android:layout_alignParentBottom="true"
     android:layout_margin="15dip"
     android:src="@drawable/play_button_normal"
-    android:background="@android:color/transparent"/>
+    android:background="@android:color/transparent"
+    android:contentDescription="@string/acd_play_button"/>
   <TextView
     android:id="@+id/contracted_status"
     android:layout_toRightOf="@id/contracted_play_pause"

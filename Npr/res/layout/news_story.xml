@@ -11,14 +11,13 @@
     android:id="@+id/NewsStoryLayout"
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical">
     <TextView
       android:layout_height="wrap_content"
       android:layout_width="fill_parent"
       android:id="@+id/NewsStoryIndex"
       android:gravity="right"
-      android:layout_alignParentRight="true"
       style="@style/NewsStoryIndex"/>
     <TextView
       android:layout_height="wrap_content"
@@ -52,7 +51,8 @@
         android:layout_weight="1"
         android:drawableLeft="@drawable/share"
         android:text="@string/msg_share"
-        android:background="@drawable/story_button_background"/>
+        android:background="@drawable/story_button_background"
+        android:nextFocusRight="@+id/NewsStoryListenNowButton"/>
       <Button
         android:id="@+id/NewsStoryListenNowButton"
         android:layout_width="wrap_content"
@@ -61,7 +61,9 @@
         android:layout_weight="1"
         android:drawableLeft="@drawable/speaker_icon"
         android:text="@string/msg_listen_now"
-        android:background="@drawable/story_button_background"/>
+        android:background="@drawable/story_button_background"
+        android:nextFocusLeft="@+id/NewsStoryShareButton"
+        android:nextFocusRight="@+id/NewsStoryListenEnqueueButton"/>
       <Button
         android:id="@+id/NewsStoryListenEnqueueButton"
         android:layout_width="wrap_content"
@@ -69,7 +71,8 @@
         android:layout_weight="1"
         android:drawableLeft="@drawable/plus"
         android:text="@string/msg_listen_later"
-        android:background="@drawable/story_button_background"/>
+        android:background="@drawable/story_button_background"
+        android:nextFocusLeft="@+id/NewsStoryListenNowButton"/>
     </LinearLayout>
     <FrameLayout
       android:layout_width="fill_parent"
@@ -77,7 +80,8 @@
       <WebView
         android:id="@+id/NewsStoryWebView"
         android:layout_height="fill_parent"
-        android:layout_width="fill_parent">
+        android:layout_width="fill_parent"
+        android:contentDescription="@string/acd_news_story_text">
       </WebView>
     </FrameLayout>
   </LinearLayout>

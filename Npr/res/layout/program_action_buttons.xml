@@ -8,6 +8,7 @@
               android:padding="10dip"
               android:background="@drawable/app_title_background"
               android:orientation="horizontal"
+              
     >
   <Button
       android:id="@+id/add_all_to_playlist"
