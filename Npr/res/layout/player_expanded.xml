@@ -122,6 +122,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="@android:color/transparent"
             android:contentDescription="@string/acd_play_button"
             android:scaleType="centerInside"
             android:src="@drawable/play_button_normal"
