@@ -176,6 +176,7 @@
   <string name="acd_search_button">Search Button</string>
   <string name="acd_play_button">Play</string>
   <string name="acd_pause_button">Pause</string>
+  <string name="acd_stop_button">Stop</string>
   <string name="acd_stream_rewind_button">Stream Rewind</string>
   <string name="acd_stream_rewind_30_button">Thirty Second Stream Rewind</string>
   <string name="acd_stream_fast_forward_button">Fast Forward Stream</string>
