@@ -48,7 +48,7 @@ public class StationDetailsActivity extends RootActivity implements
   private Station station;
   private boolean isFavorite;
   
-  private Handler m_uiHandler;
+  private Handler uiHandler;
 
   private class ListItem {
     private final AudioStream stream;
@@ -199,7 +199,7 @@ public class StationDetailsActivity extends RootActivity implements
       stationId = getIntent().getStringExtra(Constants.EXTRA_ACTIVITY_DATA);
     }
 
-    m_uiHandler = new Handler();
+    uiHandler = new Handler();
     
     new Thread() {
       @Override
@@ -238,7 +238,7 @@ public class StationDetailsActivity extends RootActivity implements
       return;
     }
     
-    m_uiHandler.post( new Runnable() {
+    uiHandler.post(new Runnable() {
       @Override
       public void run() {
         ViewGroup container = (ViewGroup) findViewById(R.id.TitleContent);
@@ -256,7 +256,7 @@ public class StationDetailsActivity extends RootActivity implements
                   stream.getUrl(),
                   String.format(getString(R.string.format_default_station_name),
                       station.getName()
-                      )
+                  )
               )));
             } else {
               listItems.add(new ListItem(stream));
@@ -276,7 +276,7 @@ public class StationDetailsActivity extends RootActivity implements
 
         listAdapter = new ListItemAdapter(StationDetailsActivity.this, listItems);
         streamList.setAdapter(listAdapter);
-        
+
         bringPlayerNavToFront();
       }
     });
