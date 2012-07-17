@@ -142,19 +142,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     }
   };
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context) {
     super(context);
     this.context = context;
   }
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context, AttributeSet attrs) {
     super(context, attrs);
     this.context = context;
   }
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public PlaylistView(Context context, AttributeSet attrs, int defStyle) {
     super(context, attrs, defStyle);
     this.context = context;
@@ -186,7 +183,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     drawer = (SlidingDrawer) findViewById(R.id.drawer);
     drawer.setOnDrawerOpenListener(this);
     drawer.setOnDrawerCloseListener(this);
-    touchSlop = ViewConfiguration.getTouchSlop();
+    touchSlop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
     handle = (RelativeLayout) findViewById(R.id.handle);
 
     playerContracted = (RelativeLayout) findViewById(R.id.player_contracted);
@@ -221,8 +218,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     clearPlaylist = (Button) findViewById(R.id.clear_playlist);
     clearPlaylist.setOnClickListener(this);
 
-    Cursor cursor = context.getContentResolver().query(PlaylistProvider
-        .CONTENT_URI, null, null, null, PlaylistProvider.Items.PLAY_ORDER);
+    Cursor cursor = queryPlaylist();
     playlistAdapter = new PlaylistAdapter(context, cursor);
 
     changeReceiver = new PlaybackChangeReceiver();
@@ -259,7 +255,7 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     listView.setDropListener(this);
 
     // Gesture detection
-    gestureDetector = new GestureDetector(
+    gestureDetector = new GestureDetector(getContext(),
         new ListItemGestureListener(listView, handler)
     );
     View.OnTouchListener gestureListener = new View.OnTouchListener() {
@@ -276,10 +272,16 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
     refreshList();
   }
 
+  private Cursor queryPlaylist()
+  {
+    Cursor cursor = context.getContentResolver().query(PlaylistProvider
+        .CONTENT_URI, null, null, null, PlaylistProvider.Items.PLAY_ORDER);
+    return cursor;
+  }
 
   private void refreshList() {
     if (playlistAdapter != null) {
-      playlistAdapter.getCursor().requery();
+      playlistAdapter.changeCursor( queryPlaylist() );
       playlistAdapter.notifyDataSetChanged();
     }
   }

@@ -29,6 +29,7 @@ import android.widget.TextView;
 import org.npr.android.util.PlaylistProvider;
 
 public class PlaylistAdapter extends CursorAdapter {
+  @SuppressWarnings("unused")
   private static final String LOG_TAG = PlaylistAdapter.class.getName();
   private String activeId;
 
@@ -62,7 +63,7 @@ public class PlaylistAdapter extends CursorAdapter {
       playlistItemState.setImageResource(R.drawable.speaker_icon);
     } else {
       view.setBackgroundDrawable(null);
-      view.setBackgroundColor(android.R.color.transparent);
+      view.setBackgroundColor(context.getResources().getColor(android.R.color.transparent));
       String isRead = cursor.getString(
         cursor.getColumnIndex(PlaylistProvider.Items.IS_READ));
       if (isRead.equals("0")) {

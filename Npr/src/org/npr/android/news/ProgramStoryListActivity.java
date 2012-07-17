@@ -35,6 +35,7 @@ import java.util.Map;
  * Author: Jeremy Wadsack
  */
 public class ProgramStoryListActivity extends NewsListActivity {
+  @SuppressWarnings("unused")
   private static final String LOG_TAG =
     ProgramStoryListActivity.class.getName();
 

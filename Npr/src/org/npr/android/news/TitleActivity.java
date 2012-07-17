@@ -16,11 +16,11 @@ package org.npr.android.news;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 public abstract class TitleActivity extends RootActivity {
+  @SuppressWarnings("unused")
   private static final String LOG_TAG = TitleActivity.class.getName();
   public static final String APP_RESUME = "org.npr.android.APP_RESUME";
 

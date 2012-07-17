@@ -14,16 +14,16 @@
 
 package org.npr.android.news;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-import android.util.Log;
-
 import org.npr.android.util.PlaylistEntry;
 import org.npr.api.Podcast;
 import org.npr.api.Station;
 import org.npr.api.Story;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 public class Playable implements Parcelable {
+  @SuppressWarnings("unused")
   private static final String LOG_TAG = Playable.class.getName();
 
   private Playable(long id, String url, String title, boolean isStream,

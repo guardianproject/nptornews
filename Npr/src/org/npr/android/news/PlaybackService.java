@@ -15,8 +15,24 @@
 
 package org.npr.android.news;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.UnknownHostException;
+import java.util.List;
+
+import org.npr.android.util.AudioManagerProxy;
+import org.npr.android.util.M3uParser;
+import org.npr.android.util.PlaylistParser;
+import org.npr.android.util.PlaylistRepository;
+import org.npr.android.util.PlsParser;
+import org.npr.android.util.Tracker;
+
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -29,22 +45,16 @@ import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.media.MediaPlayer.OnSeekCompleteListener;
-import android.os.*;
+import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
+import android.os.SystemClock;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
-
-import org.npr.android.util.*;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.ConnectException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.UnknownHostException;
-import java.util.List;
 
 public class PlaybackService extends Service implements
     OnPreparedListener, OnSeekCompleteListener,
@@ -100,7 +110,6 @@ public class PlaybackService extends Service implements
   private boolean mediaPlayerHasStarted = false;
 
   private StreamProxy proxy;
-  private NotificationManager notificationManager;
   private static final int NOTIFICATION_ID = 1;
   private PlaylistRepository playlist;
   private int startId;
@@ -154,8 +163,7 @@ public class PlaybackService extends Service implements
     mediaPlayer.setOnInfoListener(this);
     mediaPlayer.setOnPreparedListener(this);
     mediaPlayer.setOnSeekCompleteListener(this);
-    notificationManager = (NotificationManager) getSystemService(
-        Context.NOTIFICATION_SERVICE);
+
     playlist = new PlaylistRepository(getApplicationContext(),
         getContentResolver());
 
@@ -200,12 +208,13 @@ public class PlaybackService extends Service implements
   }
 
   @Override
-  public void onStart(Intent intent, int startId) {
-    super.onStart(intent, startId);
+  public int onStartCommand(Intent intent, int flags, int startId) {
+    super.onStartCommand(intent, flags, startId);
     Message message = serviceHandler.obtainMessage();
     message.arg1 = startId;
     message.obj = intent;
     serviceHandler.sendMessage(message);
+    return START_STICKY;
   }
 
   protected void onHandleIntent(Intent intent) {
@@ -403,13 +412,7 @@ public class PlaybackService extends Service implements
     String playUrl = url;
     // From 2.2 on (SDK ver 8), the local mediaplayer can handle Shoutcast
     // streams natively. Let's detect that, and not proxy.
-    int sdkVersion = 0;
-    try {
-      sdkVersion = Integer.parseInt(Build.VERSION.SDK);
-    } catch (NumberFormatException ignored) {
-    }
-
-    if (stream && sdkVersion < 8) {
+    if (stream && Build.VERSION.SDK_INT < 8) {
       if (proxy == null) {
         proxy = new StreamProxy();
         proxy.init();
@@ -448,6 +451,25 @@ public class PlaybackService extends Service implements
     mediaPlayer.start();
     mediaPlayerHasStarted = true;
 
+    presentPlayingNotification();
+
+    // Change broadcasts are sticky, so when a new receiver connects, it will
+    // have the data without polling.
+    if (lastChangeBroadcast != null) {
+      getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
+    }
+    lastChangeBroadcast = new Intent(SERVICE_CHANGE_NAME);
+    lastChangeBroadcast.putExtra(Playable.PLAYABLE_TYPE, currentPlayable);
+    getApplicationContext().sendStickyBroadcast(lastChangeBroadcast);
+
+    if (currentPlayable != null && currentPlayable.getUrl() != null) {
+      Tracker.PlayEvent e = new Tracker.PlayEvent(currentPlayable.getUrl());
+      Tracker.instance(getApplication()).trackLink(e);
+    }
+  }
+  
+  private void presentPlayingNotification()
+  {
     CharSequence contentText = currentPlayable.getTitle();
     Notification notification =
         new Notification(R.drawable.stat_notify_musicplayer,
@@ -481,21 +503,8 @@ public class PlaybackService extends Service implements
     PendingIntent contentIntent = PendingIntent.getActivity(context, 0,
         notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
     notification.setLatestEventInfo(context, title, contentText, contentIntent);
-    notificationManager.notify(NOTIFICATION_ID, notification);
 
-    // Change broadcasts are sticky, so when a new receiver connects, it will
-    // have the data without polling.
-    if (lastChangeBroadcast != null) {
-      getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
-    }
-    lastChangeBroadcast = new Intent(SERVICE_CHANGE_NAME);
-    lastChangeBroadcast.putExtra(Playable.PLAYABLE_TYPE, currentPlayable);
-    getApplicationContext().sendStickyBroadcast(lastChangeBroadcast);
-
-    if (currentPlayable != null && currentPlayable.getUrl() != null) {
-      Tracker.PlayEvent e = new Tracker.PlayEvent(currentPlayable.getUrl());
-      Tracker.instance(getApplication()).trackLink(e);
-    }
+    startForeground(NOTIFICATION_ID, notification);
   }
 
   synchronized private void pause(boolean maintainFocus) {
@@ -515,7 +524,8 @@ public class PlaybackService extends Service implements
     if (!maintainFocus) {
       audioManagerProxy.releaseAudioFocus();
     }
-    notificationManager.cancel(NOTIFICATION_ID);
+    
+    stopForeground( true );
 
     if (currentPlayable != null) {
       Tracker.PauseEvent e = new Tracker.PauseEvent(currentPlayable.getUrl());
@@ -612,8 +622,8 @@ public class PlaybackService extends Service implements
     }
 
     serviceLooper.quit();
-
-    notificationManager.cancel(NOTIFICATION_ID);
+    stopForeground( true );
+    
     if (lastChangeBroadcast != null) {
       getApplicationContext().removeStickyBroadcast(lastChangeBroadcast);
     }

@@ -69,7 +69,6 @@ public class NewsTopicActivity extends TitleActivity implements
   private ListAdapter listAdapter;
   private ListView listView;
 
-  @SuppressWarnings("unchecked")
   private int constructList() {
     List<? extends StoryGrouping> groupings =
         Topic.factory.downloadStoryGroupings(-1);

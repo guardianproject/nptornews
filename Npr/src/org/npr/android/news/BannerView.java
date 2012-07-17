@@ -136,20 +136,17 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   private int bannerHeight;
   private int screenHeight;
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public BannerView(Context context) {
     super(context);
     this.context = context;
     init();
   }
 
-  @SuppressWarnings({"UnusedDeclaration"})
   public BannerView(Context context, AttributeSet attrs) {
     super(context, attrs);
     this.context = context;
     init();
   }
-
 
   @Override
   protected void onDetachedFromWindow() {
@@ -182,15 +179,30 @@ public class BannerView extends LinearLayout implements View.OnClickListener {
   }
 
   void init() {
-    Cursor cursor = context.getContentResolver().query(IPhoneTimersConfProvider.CONTENT_URL, null, null, null, null);
-    while (cursor != null && cursor.moveToNext()) {
-      String id = cursor.getString(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.NAME));
-      if (id.equals("banners")) {
-        noBannerTimeIncrement = cursor.getInt(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.TIMER_LENGTH)) * 1000;
-        break;
-      }
-    }
+    // We need to avoid running out network operation on the UI Thread
+    new Thread() {
+      @Override
+      public void run() {
+        Cursor cursor = context.getContentResolver().query(IPhoneTimersConfProvider.CONTENT_URL, null, null, null, null);
+        while (cursor != null && cursor.moveToNext()) {
+          String id = cursor.getString(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.NAME));
+          if (id.equals("banners")) {
+            noBannerTimeIncrement = cursor.getInt(cursor.getColumnIndex(IPhoneTimersConfProvider.Items.TIMER_LENGTH)) * 1000;
+            break;
+          }
+        }
 
+        // This code however does need to run on the UI Thread
+        handler.post(new Runnable() {
+          public void run() {
+            finishInit();
+          }
+        });
+      }
+    }.start();
+  }
+  
+  private void finishInit() {
     // Don't shown until increment has elapsed
     if (System.currentTimeMillis() < noBannerUntilSystemTime) {
       setVisibility(View.GONE);

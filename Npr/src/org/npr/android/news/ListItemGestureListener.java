@@ -31,6 +31,7 @@ import android.widget.ListView;
  * <p/>
  * Author: Jeremy Wadsack
  */
+@SuppressWarnings("unused")
 public class ListItemGestureListener
   extends GestureDetector.SimpleOnGestureListener {
   private static final String LOG_TAG =

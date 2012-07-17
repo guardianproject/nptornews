@@ -15,8 +15,14 @@
 
 package org.npr.android.news;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import org.npr.android.util.PlaylistEntry;
+import org.npr.android.util.PlaylistRepository;
+import org.npr.api.ApiConstants;
+
 import android.app.Activity;
-import android.app.ActivityGroup;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -29,33 +35,24 @@ import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.KeyEvent;
-import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
-import org.npr.android.util.PlaylistEntry;
-import org.npr.android.util.PlaylistRepository;
-import org.npr.api.ApiConstants;
-
-import com.crittercism.app.Crittercism;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 /**
  * @author mfrederick@google.com (Michael Frederick)
  *         A base class for all Activities that want to display the default layout,
  *         including the PlaylistView.
  */
-public abstract class RootActivity extends ActivityGroup implements
+public abstract class RootActivity extends Activity implements
   Trackable, Refreshable, OnClickListener {
   private static final String LOG_TAG = RootActivity.class.getName();
   private NavigationView navigationView;
@@ -65,6 +62,7 @@ public abstract class RootActivity extends ActivityGroup implements
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+    requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
     super.onCreate(savedInstanceState);
 
     setContentView(R.layout.main);
@@ -83,6 +81,10 @@ public abstract class RootActivity extends ActivityGroup implements
     ImageButton mainSearchButton =
         (ImageButton) findViewById(R.id.MainSearchButton);
     mainSearchButton.setOnClickListener(this);
+    
+    ImageButton mainNavButton =
+        (ImageButton) findViewById(R.id.MainNavButton);
+    mainNavButton.setOnClickListener(this);
 
     playlistView = new PlaylistView(this);
     titleFrame.addView(playlistView,
@@ -108,10 +110,12 @@ public abstract class RootActivity extends ActivityGroup implements
 
   protected void startIndeterminateProgressIndicator() {
     progressIndicator.setVisibility(View.VISIBLE);
+    // setSupportProgressBarIndeterminateVisibility(true); // Once we move to a proper action bar
   }
 
   protected void stopIndeterminateProgressIndicator() {
     progressIndicator.setVisibility(View.INVISIBLE);
+    // setSupportProgressBarIndeterminateVisibility(false); // Once we move to a proper action bar
   }
 
 
@@ -138,6 +142,11 @@ public abstract class RootActivity extends ActivityGroup implements
 
     }
 
+    bringPlayerNavToFront();
+  }
+  
+  protected void bringPlayerNavToFront()
+  {
     // Navigation on top of player, player on top of content
     playlistView.bringToFront();
     navigationView.bringToFront();
@@ -237,15 +246,6 @@ public abstract class RootActivity extends ActivityGroup implements
   }
 
   @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    showHideNavigationMenu();
-    // We're showing our own menu, so return false to keep the system one
-    // from being displayed
-    return false;
-  }
-
-
-  @Override
   public void onCreateContextMenu(ContextMenu menu, View view,
                                   ContextMenu.ContextMenuInfo menuInfo) {
     Log.d(LOG_TAG, "Creating context menu for list items");
@@ -307,6 +307,9 @@ public abstract class RootActivity extends ActivityGroup implements
     switch (v.getId()) {
       case R.id.MainSearchButton:
         startActivityWithoutAnimation(new Intent(this, SearchActivity.class));
+        break;
+      case R.id.MainNavButton:
+        showHideNavigationMenu();
         break;
     }
   }

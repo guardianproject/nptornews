@@ -20,6 +20,7 @@ import java.lang.reflect.Array;
  * Author: Jeremy Wadsack
  */
 public class ArrayUtils {
+  @SuppressWarnings("unused")
   private static final String LOG_TAG = ArrayUtils.class.getName();
 
   public static int indexOf(int[] list, int item) {

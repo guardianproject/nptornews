@@ -138,7 +138,6 @@ public class Tracker {
 
     // prop3, eVar3
     // Title of current page (same as pageName)
-    @SuppressWarnings("unused")
     private String pageName;
     private static String[] pageNameVars =
         new String[] {"pageName", "prop3", "eVar3"};

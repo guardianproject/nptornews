@@ -211,7 +211,7 @@ public class PlaylistRepository {
     String selection = PlaylistProvider.Items.PLAY_ORDER + " > ?";
     String[] selectionArgs = new String[1];
     selectionArgs[0] = Integer.toString(entry.playOrder);
-    String sort = PlaylistProvider.Items.PLAY_ORDER + " asc";
+    //String sort = PlaylistProvider.Items.PLAY_ORDER + " asc";
     PlaylistEntry playlistEntry = retrievePlaylistItem(selection,
         selectionArgs, null);
     if (playlistEntry == null) {
