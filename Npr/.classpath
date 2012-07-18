@@ -4,7 +4,9 @@
 	<classpathentry kind="src" path="gen"/>
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
 	<classpathentry kind="lib" path="libs/libGoogleAnalytics.jar"/>
+	<classpathentry kind="lib" path="libs/crittercism_v2_1_7_crashonly.jar"/>
+	<classpathentry kind="lib" path="libs/jackson-core-2.0.4.jar"/>
+	<classpathentry kind="lib" path="libs/jackson-databind-2.0.4.jar"/>
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.LIBRARIES"/>
-	<classpathentry kind="lib" path="libs/crittercism_v1_2_3.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

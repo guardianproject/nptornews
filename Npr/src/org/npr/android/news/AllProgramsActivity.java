@@ -31,22 +31,14 @@ import android.widget.Toast;
 
 import org.npr.android.util.ArrayUtils;
 import org.npr.android.util.DisplayUtils;
+import org.npr.android.util.Program;
 import org.npr.android.util.Tracker;
 import org.npr.api.ApiConstants;
-import org.npr.api.Program;
 import org.npr.api.PublicBroadcastingClient;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-/**
- * Author: Jeremy Wadsack
- */
 public class AllProgramsActivity extends TitleActivity implements
     AdapterView.OnItemClickListener {
   private static final String LOG_TAG = AllProgramsActivity.class.getName();
@@ -75,21 +67,22 @@ public class AllProgramsActivity extends TitleActivity implements
   };
 
 
+  @SuppressWarnings("unchecked")
   protected int constructList() {
     try {
       nowPlayingIDs = PublicBroadcastingClient.getNowPlayingIds();
-    } catch (IOException ignore) {
-    }
-    List<Program> programs = new Program.ProgramFactory(getContentResolver())
-        .downloadStoryGroupings(-1);
-    listAdapter = new ProgramListAdapter(categorizePrograms(programs));
 
-    int message = 0;
+      List<Program> programs = new Program.ProgramFactory().downloadPrograms();
+      listAdapter = new ProgramListAdapter(categorizePrograms(programs));
 
-    if (programs == null) {
-      message = 1;
+      if (programs != null) {
+        return 0;
+      }
+
+    } catch (IOException e) {
+      Log.e(LOG_TAG, "Error constructing program list", e);
     }
-    return message;
+    return 1;
   }
 
 
@@ -142,13 +135,13 @@ public class AllProgramsActivity extends TitleActivity implements
       return;
     }
     Intent i = new Intent(this, ProgramStoryListActivity.class);
-    i.putExtra(Constants.EXTRA_LIVE_STREAM_RSS_URL, item.getLiveStreamUrl());
+    i.putExtra(Constants.EXTRA_LIVE_STREAM_RSS_URL, item.getLiveStationsUrl());
     i.putExtra(Constants.EXTRA_TEASER_ONLY, true);
 
     String grouping = getString(type);
-    String description = item.getTitle();
-    String topicId = item.getId();
-    String url = item.getPodcastUrl();
+    String description = item.getName();
+    String topicId = item.getNprId();
+    String url = item.getSource();
     if (url != null) {
       i.putExtra(Constants.EXTRA_PODCAST_URL, url);
     } else {
@@ -204,20 +197,15 @@ public class AllProgramsActivity extends TitleActivity implements
       // Lower category index first
       int ret = categoryIndex - other.categoryIndex;
       if (ret == 0 && program != null) {
-        // If same category, then sort preferred programs first
-        ret = getTitleRank(program.getTitle()) -
-            getTitleRank(other.program.getTitle());
-      }
-      if (ret == 0 && program != null) {
-        // Last resort, just sort alphabetically
-        ret = program.getTitle().compareTo(other.program.getTitle());
+        // Sort by order read
+        ret = program.getSortOrder() - other.program.getSortOrder();
       }
       return ret;
     }
 
     @Override
     public String toString() {
-      return program == null ? categoryName : program.toString();
+      return program == null ? categoryName : program.getName();
     }
   }
 
@@ -240,7 +228,7 @@ public class AllProgramsActivity extends TitleActivity implements
       if (icon != null) {
         int id = -1;
         if (item != null && item.program != null) {
-          String topicId = item.program.getId();
+          String topicId = item.program.getNprId();
           if (topicId != null && Character.isDigit(topicId.charAt(0))) {
             id = Integer.parseInt(topicId);
           }
@@ -287,9 +275,9 @@ public class AllProgramsActivity extends TitleActivity implements
 
     // Associate each program with its category
     for (Program p : programs) {
-      int i = getCategoryById(p.getId());
+      int i = getCategoryById(p.getNprId());
       if (i < 0) {
-        i = getCategoryByTitle(p.getTitle());
+        i = getCategoryByTitle(p.getName());
       }
       if (i < 0 ) {
         i = categories.length - 1;
@@ -354,58 +342,4 @@ public class AllProgramsActivity extends TitleActivity implements
     }
     return -1;
   }
-
-
-
-  // Order of stories by preferred rank as shown on npr.org in Programs menu
-  private final List<String> sortedProgramTitles = Arrays.asList(
-      "Morning Edition",
-      "All Things Considered",
-      "Fresh Air from WHYY",
-      "Diane Rehm (WAMU)",
-      "On the Media (WNYC)",
-      "On Point (WBUR)",
-      "Talk of the Nation",
-      "Science Friday",
-      "Tell Me More",
-      "Weekend Edition Saturday",
-      "Weekend Edition Sunday",
-      "Also heard on NPR stations:",
-      "Marketplace APM",
-      "Car Talk",
-      "Radiolab (WNYC)",
-      "Snap Judgment",
-      "Wait Wait...Don't Tell Me!",
-      "Also heard on NPR stations:",
-      "This American Life PRI",
-      "A Prairie Home Companion APM",
-      "All Songs Considered",
-      "From the Top",
-      "JazzSet",
-      "Piano Jazz",
-      "Mountain Stage",
-      "Song of the Day",
-      "Thistle & Shamrock",
-      "World Cafe",
-      "StoryCorps",
-      "Planet Money",
-      "Picture Show",
-      "Krulwich Wonders..."
-  );
-
-  private HashMap<String, Integer> programTitlesRank = null;
-
-  private int getTitleRank(String title) {
-    if (programTitlesRank == null) {
-      programTitlesRank =
-          new HashMap<String, Integer>(sortedProgramTitles.size());
-      for (int i = 0; i < sortedProgramTitles.size(); i++) {
-        programTitlesRank.put(sortedProgramTitles.get(i), i + 1);
-      }
-    }
-
-    Integer rank = programTitlesRank.get(title);
-    return rank == null ? Integer.MAX_VALUE : rank;
-  }
-
 }

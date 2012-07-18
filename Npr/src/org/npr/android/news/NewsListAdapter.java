@@ -38,6 +38,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 
 public class NewsListAdapter extends ArrayAdapter<Story> {
@@ -88,10 +89,6 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
                 .getText(R.string.msg_check_connection),
             Toast.LENGTH_LONG).show();
       }
-      if (rootActivity != null) {
-        rootActivity.stopIndeterminateProgressIndicator();
-      }
-
     }
   };
 
@@ -164,7 +161,14 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
       if (story.getThumbnails().size() > 0) {
         imageUrl = story.getThumbnails().get(0).getMedium();
       } else if (story.getImages().size() > 0) {
-        imageUrl = story.getImages().get(0).getSrc();
+        for (Map.Entry<String, Story.Image> entry : story.getImages().entrySet()) {
+          if (imageUrl == null) {
+            imageUrl = entry.getValue().getSrc();
+          } else if (entry.getValue().getType().equals("primary")) {
+            imageUrl = entry.getValue().getSrc();
+            break;
+          }
+        }
       }
       if (imageUrl != null) {
         Drawable cachedImage = imageLoader.loadImage(
@@ -191,9 +195,6 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
   }
 
   public void addMoreStories(final String url, final int count) {
-    if (rootActivity != null) {
-      rootActivity.startIndeterminateProgressIndicator();
-    }
     new Thread(new Runnable() {
       @Override
       public void run() {

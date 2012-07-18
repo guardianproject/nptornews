@@ -498,16 +498,19 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
             playPauseButton.setImageResource(R.drawable.pause_button_normal);
             playPauseButton.setContentDescription(getResources().getString(R.string.acd_pause_button));
             contractedPlayButton.setImageResource(R.drawable.pause_button_normal);
+            contractedPlayButton.setContentDescription(getResources().getString(R.string.acd_pause_button));
           } else {
             playPauseButton.setImageResource(R.drawable.stop_button_normal);
             playPauseButton.setContentDescription(getResources().getString(R.string.acd_stop_button));
             contractedPlayButton.setImageResource(R.drawable.stop_button_normal);
+            contractedPlayButton.setContentDescription(getResources().getString(R.string.acd_stop_button));
           }
           playPauseShowsPlay = false;
         } else {
           playPauseButton.setImageResource(R.drawable.play_button_normal);
           playPauseButton.setContentDescription(getResources().getString(R.string.acd_play_button));
-          contractedPlayButton.setImageResource(R.drawable.play_button_normal);          
+          contractedPlayButton.setImageResource(R.drawable.play_button_normal);
+          contractedPlayButton.setContentDescription(getResources().getString(R.string.acd_play_button));
           playPauseShowsPlay = true;
         }
       }
@@ -534,6 +537,9 @@ public class PlaylistView extends FrameLayout implements OnClickListener,
         message = context.getString(R.string.msg_playback_error);
       } else if (error == PlaybackService.PLAYBACK_SERVICE_ERROR.Connection.ordinal()) {
         message = context.getString(R.string.msg_playback_connection_error);
+      } else if (error == PlaybackService.PLAYBACK_SERVICE_ERROR.InvalidPlayable.ordinal()) {
+        message = context.getString(R.string.msg_playback_invalid_playable_error);
+        clearPlayer();
       }
       Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }

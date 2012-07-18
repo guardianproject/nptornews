@@ -11,31 +11,21 @@
     android:background="@drawable/logo_bar_back_normal"
     android:gravity="center">
     <ImageButton
-      android:id="@+id/MainSearchButton"
-      android:layout_height="wrap_content"
-      android:layout_width="wrap_content"
-      android:layout_marginTop="14dip"
-      android:layout_marginBottom="13dip"
-      android:layout_marginLeft="20dip"
-      android:layout_marginRight="20dip"
-      android:src="@drawable/search_button"
-      android:background="@android:color/transparent"
-      android:contentDescription="@string/acd_search_button"
-     
-      />
-
-    <ImageButton
         android:id="@+id/MainNavButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/navigation_button" android:background="@android:color/transparent"/>
-
+        android:layout_marginTop="14dip"
+        android:layout_marginBottom="13dip"
+        android:layout_marginLeft="20dip"
+        android:layout_marginRight="20dip"
+        android:src="@drawable/navigation_button"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/acd_menu_button"/>
     <ImageView
         android:layout_height="wrap_content"
         android:layout_width="wrap_content"
         android:layout_marginTop="1dip"
-        android:src="@drawable/logo_bar_divider"
-        />
+        android:src="@drawable/logo_bar_divider"/>
     <LinearLayout
       android:layout_height="wrap_content"
       android:layout_width="wrap_content"
@@ -56,23 +46,28 @@
         android:id="@+id/Logo2"
         />
     </LinearLayout>
-    <ProgressBar
-      android:id="@+id/WindowProgressIndicator"
-      android:layout_width="20dp"
-      android:layout_height="20dp"
-      android:layout_marginRight="20dp"
-      android:layout_marginLeft="20dp"
-      android:visibility="invisible"
-      style="@android:style/Widget.ProgressBar.Small"
-      />
+    <ImageView
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_marginTop="1dip"
+        android:src="@drawable/logo_bar_divider"/>
+    <ImageButton
+        android:id="@+id/MainSearchButton"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_marginTop="14dip"
+        android:layout_marginBottom="13dip"
+        android:layout_marginLeft="20dip"
+        android:layout_marginRight="20dip"
+        android:src="@drawable/search_button"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/acd_search_button"/>
   </LinearLayout>
-
   <FrameLayout
     android:id="@+id/SponsorshipBanner"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:layout_alignParentBottom="true"/>
-
   <FrameLayout
     android:id="@+id/TitleContent"
     android:layout_width="fill_parent"
@@ -80,5 +75,12 @@
     android:layout_below="@id/LogoBar"
     android:layout_above="@id/SponsorshipBanner">
   </FrameLayout>
-
+  <ProgressBar
+      android:id="@+id/WindowProgressIndicator"
+      android:layout_width="20dp"
+      android:layout_height="20dp"
+      android:visibility="invisible"
+      style="@android:style/Widget.ProgressBar.Small"
+      android:layout_centerInParent="true"
+      />
 </RelativeLayout>

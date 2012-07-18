@@ -34,10 +34,12 @@
     next item.</string>
   <string name="msg_playback_connection_error">Connection error.  Retrying
     in 30 seconds.</string>
+  <string name="msg_playback_invalid_playable_error">Unable to play selected item.</string>
 
   <string name="msg_check_connection">Check connection and try again.</string>
 
   <string name="msg_share_story">Share this story</string>
+  <string name="msg_image_credit">Image Credit: %s</string>
 
   <string name="msg_listen_nothing">Not playing</string>
   <string name="msg_listen_playlist">Playlist</string>
@@ -173,6 +175,7 @@
   
   <!-- Accessibility String Values -->
   <string name="acd_about">About NPR</string>
+  <string name="acd_menu_button">Menu Button</string>
   <string name="acd_search_button">Search Button</string>
   <string name="acd_play_button">Play</string>
   <string name="acd_pause_button">Pause</string>

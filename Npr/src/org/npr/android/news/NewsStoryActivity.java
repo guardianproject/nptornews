@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.Html;
@@ -49,6 +50,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class NewsStoryActivity extends RootActivity implements
     WorkspaceView.OnScreenChangeListener {
@@ -56,6 +58,8 @@ public class NewsStoryActivity extends RootActivity implements
 
   private WorkspaceView workspace;
   private LayoutInflater inflater;
+  private ImageThreadLoader imageLoader;
+
   // Sample date from api: Tue, 09 Jun 2009 15:20:00 -0400
   public static final SimpleDateFormat apiDateFormat
       = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z");
@@ -109,6 +113,7 @@ public class NewsStoryActivity extends RootActivity implements
 
     workspace = new WorkspaceView(this, null);
     inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    imageLoader = ImageThreadLoader.getOnDiskInstance(this);
 
     FrameLayout.LayoutParams layout = new FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.FILL_PARENT,
@@ -185,19 +190,39 @@ public class NewsStoryActivity extends RootActivity implements
     View storyView = inflater.inflate(R.layout.news_story, null, false);
     workspace.addView(storyView);
 
+    loadStory(story, position, total, storyView, teaserOnly);
+
+    Button listenNow =
+        (Button) storyView.findViewById(R.id.NewsStoryListenNowButton);
+    Button enqueue =
+        (Button) storyView.findViewById(R.id.NewsStoryListenEnqueueButton);
+    Button share = (Button) storyView.findViewById(R.id.NewsStoryShareButton);
+
+    StoryClickListener listener = new StoryClickListener(position);
+
+    listenNow.setOnClickListener(listener);
+    enqueue.setOnClickListener(listener);
+    share.setOnClickListener(listener);
+    boolean isListenable = story.getPlayableUrl() != null;
+    listenNow.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
+    listenNow.setEnabled(isListenable);
+    enqueue.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
+    enqueue.setEnabled(isListenable &&
+        playlistRepository.getPlaylistItemFromStoryId(story.getId()) == null);
+  }
+
+  private void loadStory(Story story, int position, int total, View storyView, boolean teaserOnly) {
+    WebView storyWebView = (WebView) storyView.findViewById(R.id.NewsStoryWebView);
+    storyWebView.getSettings().setJavaScriptEnabled(true);
+    storyWebView.setBackgroundColor(0);
+    storyWebView.addJavascriptInterface(new ImageClickInterface(this), "click");
+
     TextView index = (TextView) storyView.findViewById(R.id.NewsStoryIndex);
     TextView title = (TextView) storyView.findViewById(R.id.NewsStoryTitleText);
     TextView dateline =
         (TextView) storyView.findViewById(R.id.NewsStoryDateline);
     TextView byline =
         (TextView) storyView.findViewById(R.id.NewsStoryByline);
-    Button listenNow =
-        (Button) storyView.findViewById(R.id.NewsStoryListenNowButton);
-    Button enqueue =
-        (Button) storyView.findViewById(R.id.NewsStoryListenEnqueueButton);
-    Button share = (Button) storyView.findViewById(R.id.NewsStoryShareButton);
-    WebView textView = (WebView) storyView.findViewById(R.id.NewsStoryWebView);
-    textView.setBackgroundColor(0);
 
     index.setText(String.format(getString(R.string.msg_story_count_format),
         position + 1, total));
@@ -257,14 +282,58 @@ public class NewsStoryActivity extends RootActivity implements
     String textHtml;
     if (!teaserOnly && text != null) {
       StringBuilder sb = new StringBuilder();
-      for (String paragraph : text.getParagraphs()) {
-        sb.append("<p>").append(paragraph).append("</p>");
+      if (story.getLayout().getItems().size() > 0) {
+
+        for (Map.Entry<Integer, Story.Layout.LayoutItem> entry : story.getLayout().getItems().entrySet()) {
+
+          if (entry.getValue().getType() == Story.Layout.Type.text) {
+
+            Integer paragraphNum = entry.getKey();
+            try {
+              paragraphNum = Integer.parseInt(entry.getValue().getItemId());
+            } catch (NumberFormatException e) {
+              Log.w(LOG_TAG, "Unable to parse paragraph number: " + entry.getValue().getItemId());
+            }
+            String paragraph = text.getParagraphs().get(paragraphNum);
+            // WebView can't load external images, so we need to strip them or it
+            // may not render.
+            paragraph = paragraph.replaceAll("<img .*/>", "");
+            sb.append("<p>").append(paragraph).append("</p>");
+
+          } else if (entry.getValue().getType() == Story.Layout.Type.image &&
+              externalStorageAvailable) {
+
+            Story.Image image = story.getImages().get(entry.getValue().getItemId());
+            if (image != null) {
+              imageLoader.loadImage(image.getSrc(), new ImageLoadListener(position));
+
+              String imageTag = String.format(
+                  "<a onClick=\"window.click.clickOnImage('%s', '%s', '%s')\">" +
+                      "<div id=\"story-icon\"><img src=\"file://%s/%s\" /></div></a>",
+                  image.getSrc(),
+                  image.getCaption().replace("'", "\\'").replace("\"", "&quot;"),
+                  image.getAttribution().replace("'", "\\'").replace("\"", "&quot;"),
+                  ImageThreadLoader.DiskCache.getCachePath(this),
+                  ImageThreadLoader.DiskCache.makeCacheFileName(image.getSrc())
+              );
+              Log.d(LOG_TAG, "Adding tag for image " + imageTag);
+              sb.append(imageTag);
+            }
+          }
+        }
+      } else {
+
+        // No layout?  Just add paragraphs
+        for (Map.Entry<Integer, String> entry : text.getParagraphs().entrySet()) {
+          String paragraph = entry.getValue();
+          // WebView can't load external images, so we need to strip them or it
+          // may not render.
+          paragraph = paragraph.replaceAll("<img .*/>", "");
+          sb.append("<p>").append(paragraph).append("</p>");
+        }
       }
 
       textHtml = String.format(HTML_FORMAT, sb.toString());
-      // WebView can't load external images, so we need to strip them or it
-      // may not render.
-      textHtml = textHtml.replaceAll("<img .*/>", "");
 
       // Load any book parents
       for (Story.Parent parent : story.getParents()) {
@@ -299,33 +368,9 @@ public class NewsStoryActivity extends RootActivity implements
               + "</p>");
     }
 
-    if (story.getImages().size() > 0 && externalStorageAvailable) {
-      String imageTag = String.format(
-          "<div id=\"story-icon\"><img src=\"file://%s/%s\" /></div>",
-          ImageThreadLoader.DiskCache.getCachePath(this),
-          ImageThreadLoader.DiskCache.makeCacheFileName(
-              story.getImages().get(0).getSrc()
-          )
-      );
-      Log.d(LOG_TAG, "Adding tag for image " + imageTag);
-      textHtml = imageTag + textHtml;
-    }
-
-    textView.loadDataWithBaseURL(null, textHtml, "text/html", "utf-8", null);
-
-    StoryClickListener listener = new StoryClickListener(position);
-
-    listenNow.setOnClickListener(listener);
-    enqueue.setOnClickListener(listener);
-    share.setOnClickListener(listener);
-    boolean isListenable = story.getPlayableUrl() != null;
-    listenNow.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
-    listenNow.setEnabled(isListenable);
-    enqueue.setVisibility(isListenable ? View.VISIBLE : View.INVISIBLE);
-    enqueue.setEnabled(isListenable &&
-        playlistRepository.getPlaylistItemFromStoryId(story.getId()) == null);
+    storyWebView.loadDataWithBaseURL(null, textHtml, "text/html", "utf-8", null);
   }
-
+  
   private void playStory(boolean playNow, int position) {
     if (position >= stories.size() || position == -1) {
       Log.e(LOG_TAG, "Attempt to get story audio for position " + position +
@@ -453,13 +498,13 @@ public class NewsStoryActivity extends RootActivity implements
             if (story == null) {
               Log.e(LOG_TAG, "Story at position " + position + " is null?");
             } else {
-              String shortlink = story.getShortLink();
-              if (shortlink == null) {
-                shortlink = "http://npr.org/" + story.getId();
+              String shortLink = story.getShortLink();
+              if (shortLink == null) {
+                shortLink = "http://npr.org/" + story.getId();
               }
               Intent shareIntent = new Intent(android.content.Intent.ACTION_SEND);
               shareIntent.putExtra(Intent.EXTRA_SUBJECT, story.getTitle());
-              shareIntent.putExtra(Intent.EXTRA_TEXT, shortlink);
+              shareIntent.putExtra(Intent.EXTRA_TEXT, shortLink);
               shareIntent.setType("text/plain");
               startActivity(Intent.createChooser(shareIntent,
                   getString(R.string.msg_share_story)));
@@ -497,6 +542,7 @@ public class NewsStoryActivity extends RootActivity implements
         playable = bundle.getParcelable(Playable.PLAYABLE_TYPE);
       } catch (PackageManager.NameNotFoundException e)
       {
+        Log.e(LOG_TAG, "Unable to parse playing item information", e);
       }
       if (playable != null) {
         playlistId = playable.getId();
@@ -512,6 +558,47 @@ public class NewsStoryActivity extends RootActivity implements
               (Button) v.findViewById(R.id.NewsStoryListenNowButton);
           listenNow.setEnabled(!stories.get(i).getId().equals(pe.storyID));
         }
+      }
+    }
+  }
+
+  private class ImageLoadListener implements ImageThreadLoader.ImageLoadedListener {
+
+    int position;
+    
+    public ImageLoadListener(int position) {
+      this.position = position;
+    }
+    
+    public void imageLoaded(Drawable imageBitmap) {
+      boolean teaserOnly = getIntent().getBooleanExtra(Constants.EXTRA_TEASER_ONLY, false);
+      loadStory(
+          stories.get(position),
+          position,
+          stories.size(),
+          workspace.getChildAt(position),
+          teaserOnly);
+    }
+  }
+
+  final class ImageClickInterface {
+
+    private Context context;
+    
+    public ImageClickInterface(Context context) {
+      this.context = context;
+    }
+
+    @SuppressWarnings("unused")
+    public void clickOnImage(final String url, final String caption, final String provider) {
+      Log.v("Image click url: ", url + ", " + caption + ", " + provider);
+
+      if (url != null && url.length() > 0) {
+        Intent intent = new Intent(context, NewsImageActivity.class);
+        intent.putExtra(NewsImageActivity.EXTRA_IMAGE_URL, url);
+        intent.putExtra(NewsImageActivity.EXTRA_IMAGE_CAPTION, caption);
+        intent.putExtra(NewsImageActivity.EXTRA_IMAGE_PROVIDER, provider);
+        startActivityWithoutAnimation(intent);
       }
     }
   }

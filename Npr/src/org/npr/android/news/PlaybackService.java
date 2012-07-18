@@ -19,12 +19,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ConnectException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.List;
 
+import android.os.*;
 import org.npr.android.util.AudioManagerProxy;
 import org.npr.android.util.M3uParser;
 import org.npr.android.util.PlaylistParser;
@@ -45,13 +43,6 @@ import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnInfoListener;
 import android.media.MediaPlayer.OnPreparedListener;
 import android.media.MediaPlayer.OnSeekCompleteListener;
-import android.os.Build;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.os.SystemClock;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -99,7 +90,7 @@ public class PlaybackService extends Service implements
 
   public static final String EXTRA_ERROR = SERVICE_PREFIX + "ERROR";
 
-  public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback}
+  public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback, InvalidPlayable}
 
   private MediaPlayer mediaPlayer;
   private boolean isPrepared = false;
@@ -300,6 +291,14 @@ public class PlaybackService extends Service implements
     connectionErrorWaitTime = startingWaitTime;
     while (errorCount < ERROR_RETRY_COUNT) {
       try {
+        if (currentPlayable == null || currentPlayable.getUrl() == null) {
+          Intent intent = new Intent(SERVICE_ERROR_NAME);
+          intent.putExtra(EXTRA_ERROR, PLAYBACK_SERVICE_ERROR.InvalidPlayable.ordinal());
+          getApplicationContext().sendBroadcast(intent);
+
+          return false;
+        }
+
         prepareThenPlay(currentPlayable.getUrl(), currentPlayable.isStream());
         return true;
       } catch (UnknownHostException e) {
@@ -400,12 +399,8 @@ public class PlaybackService extends Service implements
     stop();
 
     if (isPlaylist(url)) {
-      downloadPlaylist(url);
-      if (playlistUrls.size() > 0) {
-        url = playlistUrls.remove(0);
-      } else {
-        throw new IOException("Empty playlist downloaded");
-      }
+      new downloadPlaylist().execute(url);
+      return;
     }
 
     Log.d(LOG_TAG, "listening to " + url + " stream=" + stream);
@@ -813,36 +808,57 @@ public class PlaybackService extends Service implements
     return url.contains("m3u") || url.contains("pls");
   }
 
-  private boolean downloadPlaylist(String url) throws IOException {
-    Log.d(LOG_TAG, "downloading " + url);
-    URLConnection cn = new URL(url).openConnection();
-    cn.connect();
-    InputStream stream = cn.getInputStream();
-    if (stream == null) {
-      Log.e(LOG_TAG, "Unable to create InputStream for url: + url");
-      return false;
+  private class downloadPlaylist extends AsyncTask<String, Void, Boolean> {
+    protected Boolean doInBackground(String... urls) {
+      Log.d(LOG_TAG, "downloading " + urls[0]);
+      try {
+        URLConnection cn = new URL(urls[0]).openConnection();
+        cn.connect();
+        InputStream stream = cn.getInputStream();
+        if (stream == null) {
+          Log.e(LOG_TAG, "Unable to create InputStream for url: + url");
+          return false;
+        }
+
+        File downloadingMediaFile = new File(getCacheDir(), "playlist_data");
+        FileOutputStream out = new FileOutputStream(downloadingMediaFile);
+        byte buf[] = new byte[16384];
+        int bytesRead;
+        while ((bytesRead = stream.read(buf)) > 0) {
+          out.write(buf, 0, bytesRead);
+        }
+
+        stream.close();
+        out.close();
+        PlaylistParser parser;
+        if (urls[0].contains("m3u")) {
+          parser = new M3uParser(downloadingMediaFile);
+        } else if (urls[0].contains("pls")) {
+          parser = new PlsParser(downloadingMediaFile);
+        } else {
+          return false;
+        }
+        playlistUrls = parser.getUrls();
+      } catch (IOException e) {
+        Log.e(LOG_TAG, "Unable to download playlist from url" + urls[0]);
+        return false;
+      }
+      return true;
     }
 
-    File downloadingMediaFile = new File(getCacheDir(), "playlist_data");
-    FileOutputStream out = new FileOutputStream(downloadingMediaFile);
-    byte buf[] = new byte[16384];
-    int bytesRead;
-    while ((bytesRead = stream.read(buf)) > 0) {
-      out.write(buf, 0, bytesRead);
+    protected void onPostExecute(Boolean result) {
+      if (result && playlistUrls != null && playlistUrls.size() > 0) {
+        try {
+          prepareThenPlay(playlistUrls.remove(0), currentPlayable.isStream());
+        } catch (IOException e) {
+          Log.e(LOG_TAG, "IOException on playlist entry " + currentPlayable.getId(), e);
+          incrementErrorCount();
+          playCurrent(errorCount, connectionErrorWaitTime);
+        }
+      } else {
+        incrementErrorCount();
+        playCurrent(errorCount, connectionErrorWaitTime);
+      }
     }
-
-    stream.close();
-    out.close();
-    PlaylistParser parser;
-    if (url.contains("m3u")) {
-      parser = new M3uParser(downloadingMediaFile);
-    } else if (url.contains("pls")) {
-      parser = new PlsParser(downloadingMediaFile);
-    } else {
-      return false;
-    }
-    playlistUrls = parser.getUrls();
-    return true;
   }
-
 }

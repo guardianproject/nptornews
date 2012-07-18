@@ -36,16 +36,7 @@
     </content>
     <orderEntry type="jdk" jdkName="Android 2.1 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/libs/libGoogleAnalytics.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="library" name="crittercism_v1_2_3" level="project" />
+    <orderEntry type="library" name="Libs" level="project" />
   </component>
 </module>
 

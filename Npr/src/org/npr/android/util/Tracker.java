@@ -37,7 +37,7 @@ public class Tracker {
 
       // Start the tracker in manual dispatch mode.
       // Remember to dispatch() after every trackPageView
-      gaTracker.start("UA-5828686-6", application);
+      gaTracker.startNewSession("UA-5828686-6", application);
       gaTracker.trackPageView("/version%20" + getVersionName());
       Log.d(LOG_TAG, "Tracking version " + getVersionName());
       gaTracker.dispatch();
@@ -48,7 +48,7 @@ public class Tracker {
 
   public void finish() {
     if (gaTracker != null) {
-      gaTracker.stop();
+      gaTracker.stopSession();
     }
   }
 

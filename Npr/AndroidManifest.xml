@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest
   xmlns:android="http://schemas.android.com/apk/res/android"
-  package="org.npr.android.news" android:versionName="2.3"
+  package="org.npr.android.news" android:versionName="2.4"
   android:versionCode="3">
   
   <uses-permission
@@ -57,6 +57,9 @@
       </intent-filter>
     </activity>
     <activity
+        android:name="NewsImageActivity"
+        android:screenOrientation="portrait"/>
+    <activity
       android:name="NewsTopicActivity"
       android:screenOrientation="portrait"/>
     <activity
@@ -111,9 +114,6 @@
       android:name="android.test.runner"/>
 
     <!-- Start of Crittercism.com Code -->
-    <activity android:name="com.crittercism.FeedbackActivity"/>
-    <activity android:name="com.crittercism.FeedbackCreateActivity"/>
-    <activity android:name="com.crittercism.FeedbackDetailsActivity"/>
     <activity android:name="com.crittercism.NotificationActivity"/>
     <!-- End of Crittercism.com Code -->
 

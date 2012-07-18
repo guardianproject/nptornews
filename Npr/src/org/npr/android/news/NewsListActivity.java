@@ -29,11 +29,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.AdapterView;
+import android.widget.*;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.TextView;
 import org.npr.android.util.*;
 import org.npr.android.util.Tracker.StoryListMeasurement;
 import org.npr.api.ApiConstants;
@@ -226,13 +223,30 @@ public class NewsListActivity extends TitleActivity implements
     registerReceiver(playlistChangedReceiver,
         new IntentFilter(PlaylistRepository.PLAYLIST_CHANGED));
 
+    startIndeterminateProgressIndicator();
     addStories();
+  }
+
+  protected void startStoryLoadProgressIndicator() {
+    FrameLayout storyLoadProgress = (FrameLayout) findViewById(R.id.StoryLoadBar);
+    if (storyLoadProgress != null) {
+      storyLoadProgress.setVisibility(View.VISIBLE);
+    }
+  }
+
+  protected void stopStoryLoadProgressIndicator() {
+    FrameLayout storyLoadProgress = (FrameLayout) findViewById(R.id.StoryLoadBar);
+    if (storyLoadProgress != null) {
+      storyLoadProgress.setVisibility(View.INVISIBLE);
+    }
   }
 
   private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
     @Override
     public void storiesLoaded() {
       bannerView.startCloseTimer();
+      stopIndeterminateProgressIndicator();
+      stopStoryLoadProgressIndicator();
     }
   };
 
@@ -267,6 +281,7 @@ public class NewsListActivity extends TitleActivity implements
 
     Story s = (Story) parent.getAdapter().getItem(position);
     if (s == null) {
+      startStoryLoadProgressIndicator();
       addStories();
     } else {
       Intent i = new Intent(this, NewsStoryActivity.class);

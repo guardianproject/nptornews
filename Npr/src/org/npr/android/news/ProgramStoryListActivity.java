@@ -76,6 +76,7 @@ public class ProgramStoryListActivity extends NewsListActivity {
   private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
     @Override
     public void storiesLoaded() {
+      stopIndeterminateProgressIndicator();
       if (loadAll) {
         loadAll = false;
         PlaylistRepository playlistRepository =

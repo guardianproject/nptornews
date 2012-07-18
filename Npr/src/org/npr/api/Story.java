@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -57,12 +56,13 @@ public class Story extends ApiElement {
   private final List<Toenail> toenails;
   private final List<Organization> organizations;
   private final List<Audio> audios;
-  private final List<Image> images;
+  private final Map<String, Image> images;
   private final List<RelatedLink> relatedLinks;
   private final List<PullQuote> pullQuotes;
   private final Text text;
   private final TextWithHtml textWithHtml;
   private final List<Parent> parents;
+  private final Layout layout;
 
   public static class Thumbnail {
     private final String medium;
@@ -104,6 +104,7 @@ public class Story extends ApiElement {
       return name;
     }
 
+    @SuppressWarnings("unused")
     public String getWebsite() {
       return website;
     }
@@ -131,10 +132,12 @@ public class Story extends ApiElement {
         return mp3;
       }
 
+      @SuppressWarnings("unused")
       public String getWm() {
         return wm;
       }
 
+      @SuppressWarnings("unused")
       public String getRm() {
         return rm;
       }
@@ -167,30 +170,29 @@ public class Story extends ApiElement {
   public static class Image {
     @SuppressWarnings("unused")
     private final String id;
-    @SuppressWarnings("unused")
     private final String type;
     @SuppressWarnings("unused")
     private final String width;
     private final String src;
     @SuppressWarnings("unused")
     private final String hasBorder;
+    private final String caption;
     @SuppressWarnings("unused")
     private final String linkUrl;
-    @SuppressWarnings("unused")
     private final String producer;
-    @SuppressWarnings("unused")
     private final String provider;
     @SuppressWarnings("unused")
     private final String copyright;
 
-    public Image(String id, String type, String width, String src,
-                 String hasBorder, String linkUrl, String producer, String provider,
+    public Image(String id, String type, String width, String src, String hasBorder, 
+                 String caption, String linkUrl, String producer, String provider,
                  String copyright) {
       this.id = id;
       this.type = type;
       this.width = width;
       this.src = src;
       this.hasBorder = hasBorder;
+      this.caption = caption;
       this.linkUrl = linkUrl;
       this.producer = producer;
       this.provider = provider;
@@ -199,6 +201,27 @@ public class Story extends ApiElement {
 
     public String getSrc() {
       return src;
+    }
+
+    public String getCaption() {
+      return caption;
+    }
+    
+    public String getType() {
+      return type;
+    }
+
+    public String getAttribution() {
+      if (producer != null && producer.length() > 0) {
+        if (provider != null && provider.length() > 0) {
+          return producer + "/" + provider;
+        } else {
+          return producer;
+        }
+      } else if (provider != null && provider.length() > 0) {
+        return provider;
+      }
+      return "";
     }
   }
 
@@ -233,25 +256,26 @@ public class Story extends ApiElement {
   }
 
   public static class Text {
-    private final List<String> paragraphs;
+    private final Map<Integer, String> paragraphs;
 
-    public Text(List<String> paragraphs) {
+    public Text(Map<Integer, String> paragraphs) {
       this.paragraphs = paragraphs;
     }
 
-    public List<String> getParagraphs() {
+    @SuppressWarnings("unused")
+    public Map<Integer, String> getParagraphs() {
       return paragraphs;
     }
   }
 
   public static class TextWithHtml {
-    private final List<String> paragraphs;
+    private final Map<Integer, String> paragraphs;
 
-    public TextWithHtml(List<String> paragraphs) {
+    public TextWithHtml(Map<Integer, String> paragraphs) {
       this.paragraphs = paragraphs;
     }
 
-    public List<String> getParagraphs() {
+    public Map<Integer, String> getParagraphs() {
       return paragraphs;
     }
   }
@@ -271,10 +295,12 @@ public class Story extends ApiElement {
       return name;
     }
 
+    @SuppressWarnings("unused")
     public String getHtmlLink() {
       return htmlLink;
     }
 
+    @SuppressWarnings("unused")
     public String getApiLink() {
       return apiLink;
     }
@@ -319,16 +345,49 @@ public class Story extends ApiElement {
       return apiLink;
     }
   }
+  
+  public static class Layout {
 
-  public Story(String id, String link, String shortLink, String title,
-               String subtitle,
+    public enum Type {text, image}
+
+    private final SortedMap<Integer, LayoutItem> items;
+
+    public Layout(SortedMap<Integer, LayoutItem> items) {
+      this.items = items;
+    }
+
+    public SortedMap<Integer, Layout.LayoutItem> getItems() {
+      return items;
+    }
+
+    public static class LayoutItem {
+  
+      private final Type type;
+      private final String itemId;
+      
+      public LayoutItem(Type type, String itemId) {
+        this.type = type;
+        this.itemId = itemId;
+      }
+      
+      public Type getType() {
+        return type;
+      }
+      
+      public String getItemId() {
+        return itemId;
+      }
+    }
+  }
+
+  public Story(String id, String link, String shortLink, String title, String subtitle,
                String shortTitle, String teaser, String miniTeaser, String slug,
-               String storyDate, String pubDate, String lastModifiedDate,
-               String keywords, String priorityKeywords, List<Byline> bylines,
-               List<Thumbnail> thumbnails, List<Toenail> toenails,
-               List<Organization> organizations, List<Audio> audios, List<Image> images,
-               List<RelatedLink> relatedLinks, List<PullQuote> pullQuotes, Text text,
-               TextWithHtml textWithHtml, List<Parent> parents) {
+               String storyDate, String pubDate, String lastModifiedDate, String keywords, 
+               String priorityKeywords, List<Byline> bylines, List<Thumbnail> thumbnails, 
+               List<Toenail> toenails, List<Organization> organizations, List<Audio> audios, 
+               Map<String, Image> images, List<RelatedLink> relatedLinks, 
+               List<PullQuote> pullQuotes, Text text, TextWithHtml textWithHtml, 
+               List<Parent> parents, Layout layout) {
     super(id);
     this.link = link;
     this.shortLink = shortLink;
@@ -354,8 +413,10 @@ public class Story extends ApiElement {
     this.text = text;
     this.textWithHtml = textWithHtml;
     this.parents = parents;
+    this.layout = layout;
   }
 
+  @SuppressWarnings("unused")
   public String getLink() {
     return link;
   }
@@ -368,10 +429,12 @@ public class Story extends ApiElement {
     return title;
   }
 
+  @SuppressWarnings("unused")
   public String getSubtitle() {
     return subtitle;
   }
 
+  @SuppressWarnings("unused")
   public String getShortTitle() {
     return shortTitle;
   }
@@ -380,6 +443,7 @@ public class Story extends ApiElement {
     return teaser;
   }
 
+  @SuppressWarnings("unused")
   public String getMiniTeaser() {
     return miniTeaser;
   }
@@ -401,18 +465,22 @@ public class Story extends ApiElement {
     return storyDate == null ? pubDate : storyDate;
   }
 
+  @SuppressWarnings("unused")
   public String getPubDate() {
     return pubDate;
   }
 
+  @SuppressWarnings("unused")
   public String getLastModifiedDate() {
     return lastModifiedDate;
   }
 
+  @SuppressWarnings("unused")
   public String getKeywords() {
     return keywords;
   }
 
+  @SuppressWarnings("unused")
   public String getPriorityKeywords() {
     return priorityKeywords;
   }
@@ -425,6 +493,7 @@ public class Story extends ApiElement {
     return thumbnails;
   }
 
+  @SuppressWarnings("unused")
   public List<Toenail> getToenails() {
     return toenails;
   }
@@ -437,14 +506,16 @@ public class Story extends ApiElement {
     return audios;
   }
 
-  public List<Image> getImages() {
+  public Map<String, Image> getImages() {
     return images;
   }
 
+  @SuppressWarnings("unused")
   public List<RelatedLink> getRelatedLinks() {
     return relatedLinks;
   }
 
+  @SuppressWarnings("unused")
   public List<PullQuote> getPullQuotes() {
     return pullQuotes;
   }
@@ -465,6 +536,10 @@ public class Story extends ApiElement {
   public List<Parent> getParents() {
     return parents;
   }
+  
+  public Layout getLayout() {
+    return layout;
+  }
 
   public static class StoryBuilder {
     private final String id;
@@ -481,17 +556,18 @@ public class Story extends ApiElement {
     private String lastModifiedDate;
     private String keywords;
     private String priorityKeywords;
-    private final List<Byline> bylines = new LinkedList<Byline>();
-    private final List<Thumbnail> thumbnails = new LinkedList<Thumbnail>();
-    private final List<Toenail> toenails = new LinkedList<Toenail>();
-    private final List<Organization> organizations = new LinkedList<Organization>();
-    private final List<Audio> audios = new LinkedList<Audio>();
-    private final List<Image> images = new LinkedList<Image>();
-    private final List<RelatedLink> relatedLinks = new LinkedList<RelatedLink>();
-    private final List<PullQuote> pullQuotes = new LinkedList<PullQuote>();
+    private final List<Byline> bylines = new ArrayList<Byline>();
+    private final List<Thumbnail> thumbnails = new ArrayList<Thumbnail>();
+    private final List<Toenail> toenails = new ArrayList<Toenail>();
+    private final List<Organization> organizations = new ArrayList<Organization>();
+    private final List<Audio> audios = new ArrayList<Audio>();
+    private final Map<String, Image> images = new HashMap<String, Image>();
+    private final List<RelatedLink> relatedLinks = new ArrayList<RelatedLink>();
+    private final List<PullQuote> pullQuotes = new ArrayList<PullQuote>();
     private Text text;
     private TextWithHtml textWithHtml;
-    private final List<Parent> parents = new LinkedList<Parent>();
+    private final List<Parent> parents = new ArrayList<Parent>();
+    private Layout layout;
 
     public StoryBuilder(String id) {
       this.id = id;
@@ -512,11 +588,13 @@ public class Story extends ApiElement {
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withSubtitle(String subtitle) {
       this.subtitle = subtitle;
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withShortTitle(String shortTitle) {
       this.shortTitle = shortTitle;
       return this;
@@ -547,16 +625,19 @@ public class Story extends ApiElement {
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withLastModifiedDate(String lastModifiedDate) {
       this.lastModifiedDate = lastModifiedDate;
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withKeywords(String keywords) {
       this.keywords = keywords;
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withPriorityKeywords(String priorityKeywords) {
       this.priorityKeywords = priorityKeywords;
       return this;
@@ -567,11 +648,13 @@ public class Story extends ApiElement {
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withThumbnail(Thumbnail thumbnail) {
       this.thumbnails.add(thumbnail);
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withToenail(Toenail toenail) {
       this.toenails.add(toenail);
       return this;
@@ -587,16 +670,18 @@ public class Story extends ApiElement {
       return this;
     }
 
-    public StoryBuilder withImage(Image image) {
-      this.images.add(image);
+    public StoryBuilder withImage(String id, Image image) {
+      this.images.put(id, image);
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withRelatedLink(RelatedLink relatedLink) {
       this.relatedLinks.add(relatedLink);
       return this;
     }
 
+    @SuppressWarnings("unused")
     public StoryBuilder withPullQuote(PullQuote pullQuote) {
       this.pullQuotes.add(pullQuote);
       return this;
@@ -616,16 +701,19 @@ public class Story extends ApiElement {
       this.parents.add(parent);
       return this;
     }
+    
+    public StoryBuilder withLayout(Layout layout) {
+      this.layout = layout;
+      return this;
+    }
 
     public Story build() {
       return new Story(id, link, shortLink, title, subtitle, shortTitle,
-          teaser,
-          miniTeaser, slug, storyDate, pubDate, lastModifiedDate, keywords,
-          priorityKeywords, bylines, thumbnails, toenails, organizations,
-          audios, images, relatedLinks, pullQuotes, text, textWithHtml,
-          parents);
+          teaser, miniTeaser, slug, storyDate, pubDate, lastModifiedDate,
+          keywords, priorityKeywords, bylines, thumbnails, toenails,
+          organizations, audios, images, relatedLinks, pullQuotes, text,
+          textWithHtml, parents, layout);
     }
-
   }
 
   public static class StoryFactory {
@@ -747,11 +835,14 @@ public class Story extends ApiElement {
           } else if (nodeName.equals("audio")) {
             sb.withAudio(parseAudio(n));
           } else if (nodeName.equals("image")) {
-            sb.withImage(parseImage(n));
+            Image image = parseImage(n);
+            sb.withImage(image.id, image);
           } else if (nodeName.equals("organization")) {
             sb.withOrganization(parseOrganization(n));
           } else if (nodeName.equals("parent")) {
             sb.withParent(parseParent(n));
+          } else if (nodeName.equals("layout")) {
+            sb.withLayout(new Layout(parseLayout(n)));
           }
         }
       } catch (Exception e) {
@@ -760,7 +851,59 @@ public class Story extends ApiElement {
       }
       return sb.build();
     }
+    
+    private static SortedMap<Integer, Layout.LayoutItem> parseLayout(Node node) {
 
+      SortedMap<Integer, Layout.LayoutItem> layout = new TreeMap<Integer, Layout.LayoutItem>();
+      
+      for (Node layoutChild : new IterableNodeList(node.getChildNodes())) {
+        if (layoutChild.getNodeName().equals("storytext")) {
+          for (Node layoutNode : new IterableNodeList(layoutChild.getChildNodes())) {
+            String layoutType = layoutNode.getNodeName();
+            if (layoutType.equals("text")) {
+              Integer num = layout.size();
+              Attr numAttr = (Attr) layoutNode.getAttributes().getNamedItem("num");
+              if (numAttr != null) {
+                try {
+                  num = Integer.parseInt(numAttr.getValue());
+                } catch (NumberFormatException e) {
+                  // Leave as the last item if parse fails
+                }
+              }
+              String paragraphNum;
+              Attr paragraphNumAttr = 
+                  (Attr) layoutNode.getAttributes().getNamedItem("paragraphNum");
+              if (paragraphNumAttr != null) {
+                paragraphNum = paragraphNumAttr.getValue();
+              } else {
+                paragraphNum = num.toString();
+              }
+              Layout.LayoutItem item = 
+                  new Layout.LayoutItem(Layout.Type.text, paragraphNum);
+              layout.put(num, item);
+            } else if (layoutType.equals("image")) {
+              Integer num = layout.size();
+              Attr numAttr = (Attr) layoutNode.getAttributes().getNamedItem("num");
+              if (numAttr != null) {
+                try {
+                  num = Integer.parseInt(numAttr.getValue());
+                } catch (NumberFormatException e) {
+                  // Leave as the last item if parse fails
+                }
+              }
+              Attr refIdAttr = (Attr) layoutNode.getAttributes().getNamedItem("refId");
+              if (refIdAttr != null) {
+                Layout.LayoutItem item = 
+                    new Layout.LayoutItem(Layout.Type.image, refIdAttr.getValue());
+                layout.put(num, item);
+              }
+            }
+          }
+        }
+      }
+      return layout;
+    }
+    
     private static Parent parseParent(Node node) {
       String id = null, type = null, title = null, apiLink = null;
       boolean isPrimary = false;
@@ -832,22 +975,32 @@ public class Story extends ApiElement {
       // Attributes
       String id = null, type = null, width = null, src = null, hasBorder = null;
       // Sub-elements
-      String linkUrl = null, producer = null, provider = null, copyright = null;
+      String caption = null, linkUrl = null, producer = null, provider = null, copyright = null;
       Attr idAttr = (Attr) node.getAttributes().getNamedItem("id");
       if (idAttr != null) {
         id = idAttr.getValue();
       }
+      Attr typeAttr = (Attr) node.getAttributes().getNamedItem("type");
+      if (typeAttr != null) {
+        type = typeAttr.getValue();
+      }
 
       for (Node n : new IterableNodeList(node.getChildNodes())) {
         if (n.getNodeName().equals("crop")) {
-          Attr typeAttr = (Attr) n.getAttributes().getNamedItem("type");
-          if (typeAttr != null && typeAttr.getValue().equals("square")) {
+          Attr cropTypeAttr = (Attr) n.getAttributes().getNamedItem("type");
+          if (cropTypeAttr != null && cropTypeAttr.getValue().equals("square")) {
             Attr srcAttr = (Attr) n.getAttributes().getNamedItem("src");
             if (srcAttr != null) {
               src = srcAttr.getValue();
               break;
             }
           }
+        } else if (n.getNodeName().equals("caption")) {
+          caption = NodeUtils.getTextContent(n);
+        } else if (n.getNodeName().equals("producer")) {
+          producer = NodeUtils.getTextContent(n);
+        } else if (n.getNodeName().equals("provider")) {
+          provider = NodeUtils.getTextContent(n);
         }
       }
 
@@ -865,12 +1018,11 @@ public class Story extends ApiElement {
         Log.e(LOG_TAG, "Error replacing size in story image parsing");
       }
 
-      return new Image(id, type, width, src, hasBorder, linkUrl, producer,
+      return new Image(id, type, width, src, hasBorder, caption, linkUrl, producer,
           provider, copyright);
     }
 
-    private static List<String> parseParagraphs(Node node) {
-      List<String> paragraphs = new LinkedList<String>();
+    private static Map<Integer, String> parseParagraphs(Node node) {
       // Presumably, the paragraphs will be in order. However, in the rare case
       // that they are not, we can order them according to the number attribute.
       SortedMap<Integer, String> paragraphMap = new TreeMap<Integer, String>();
@@ -886,10 +1038,7 @@ public class Story extends ApiElement {
           }
         }
       }
-      for (Entry<Integer, String> e : paragraphMap.entrySet()) {
-        paragraphs.add(e.getValue());
-      }
-      return paragraphs;
+      return paragraphMap;
     }
 
     private static Audio parseAudio(Node node) {

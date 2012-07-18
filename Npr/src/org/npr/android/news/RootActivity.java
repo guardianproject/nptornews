@@ -18,6 +18,7 @@ package org.npr.android.news;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import android.view.*;
 import org.npr.android.util.PlaylistEntry;
 import org.npr.android.util.PlaylistRepository;
 import org.npr.api.ApiConstants;
@@ -33,15 +34,10 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
-import android.view.ContextMenu;
-import android.view.KeyEvent;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
-import android.view.Window;
+
+// import com.crittercism.app.Crittercism;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
@@ -218,7 +214,6 @@ public abstract class RootActivity extends Activity implements
    * @param playable A Playable stream or podcast to play.
    */
   protected void playSingleNow(Playable playable) {
-    startIndeterminateProgressIndicator();
 
     if (updateReceiver != null) {
       unregisterReceiver(updateReceiver);
@@ -243,6 +238,14 @@ public abstract class RootActivity extends Activity implements
         }
       }
     }
+  }
+
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    showHideNavigationMenu();
+    // We're showing our own menu, so return false to keep the system one
+    // from being displayed
+    return false;
   }
 
   @Override

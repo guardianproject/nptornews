@@ -49,7 +49,8 @@ public class ApiConstants {
   public static final String PARAM_REQUIRED_ASSETS = "requiredAssets";
   public static final String PARAM_RANDOMIZE_STATIONS = "randomize";
 
-  public static final String STORY_FIELDS = "titles,teasers,storyDate,byline,text,audio,textWithHtml,image,organization,parent";
+  public static final String STORY_FIELDS
+      = "titles,teasers,storyDate,byline,audio,textWithHtml,image,organization,parent,layout";
   private final String apiKey;
   private static ApiConstants instance;
 
