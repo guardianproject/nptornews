@@ -143,12 +143,14 @@ public class NewsListActivity extends TitleActivity implements
 
   public static Story getStoryFromCache(String storyId, Context context) {
     Story result = storyCache.get(storyId);
-    if (result == null) {
-      result = Story.StoryFactory.downloadStory(storyId, context);
-      storyCache.put(storyId, result);
+    
+    if (result == null) {    	
+    	new StoryFetcher(storyId, storyCache, context).fetch();
+      
     }
     return result;
   }
+  
 
   public static void addAllToStoryCache(List<Story> stories) {
     for (Story story : stories) {
