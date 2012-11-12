@@ -146,14 +146,10 @@ public class PlaybackService extends Service implements
   @Override
   public void onCreate() {
     super.onCreate();
-    mediaPlayer = new MediaPlayer();
-    mediaPlayer.setOnBufferingUpdateListener(this);
-    mediaPlayer.setOnCompletionListener(this);
-    mediaPlayer.setOnErrorListener(this);
-    mediaPlayer.setOnInfoListener(this);
-    mediaPlayer.setOnPreparedListener(this);
-    mediaPlayer.setOnSeekCompleteListener(this);
-
+    
+    initMediaPlayer();
+    
+    
     playlist = new PlaylistRepository(getApplicationContext(),
         getContentResolver());
 
@@ -195,6 +191,18 @@ public class PlaybackService extends Service implements
 
     serviceLooper = thread.getLooper();
     serviceHandler = new ServiceHandler(serviceLooper);
+  }
+  
+  private void initMediaPlayer ()
+  {
+	  mediaPlayer = new MediaPlayer();
+	    mediaPlayer.setOnBufferingUpdateListener(this);
+	    mediaPlayer.setOnCompletionListener(this);
+	    mediaPlayer.setOnErrorListener(this);
+	    mediaPlayer.setOnInfoListener(this);
+	    mediaPlayer.setOnPreparedListener(this);
+	    mediaPlayer.setOnSeekCompleteListener(this);
+
   }
 
   @Override
@@ -421,7 +429,12 @@ public class PlaybackService extends Service implements
     markedRead = !currentAction.equals(SERVICE_PLAY_ENTRY);
     synchronized (this) {
       Log.d(LOG_TAG, "reset: " + playUrl);
-      mediaPlayer.reset();
+      if (mediaPlayer != null)
+    	  mediaPlayer.reset();
+      else
+      {
+    	  initMediaPlayer();
+      }
       mediaPlayer.setDataSource(playUrl);
       mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
       Log.d(LOG_TAG, "Preparing: " + playUrl);
