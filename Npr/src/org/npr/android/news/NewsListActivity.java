@@ -36,6 +36,8 @@ import org.npr.api.ApiConstants;
 import org.npr.api.Book;
 import org.npr.api.Story;
 
+import info.guardianproject.onionkit.ui.OrbotHelper;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -170,6 +172,18 @@ public class NewsListActivity extends TitleActivity implements
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
+	  
+	  OrbotHelper oc = new OrbotHelper(this);
+		
+		if (!oc.isOrbotInstalled())
+		{
+			oc.promptToInstall(this);
+		}
+		else if (!oc.isOrbotRunning())
+		{
+			oc.requestOrbotStart(this);
+		}
+		
     if (getIntent() == null ||
         !(getIntent().hasExtra(Constants.EXTRA_QUERY_URL)
             || getIntent().hasExtra(Constants.EXTRA_PODCAST_URL))) {
