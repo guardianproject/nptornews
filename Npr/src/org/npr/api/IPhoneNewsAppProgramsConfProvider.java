@@ -126,7 +126,7 @@ Car Talk,http://www.npr.org/rss/podcast.php?id=510208,18,1,http://itunes.apple.c
    */
   private boolean load() {
     try {
-      InputStream stream = HttpHelper.download(CONF_URL);
+      InputStream stream = HttpHelper.download(CONF_URL, getContext());
       if (stream == null) {
         return false;
       }

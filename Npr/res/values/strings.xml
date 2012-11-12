@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="app_name">NPR News</string>
+  <string name="app_name">NPToR</string>
 
   <string name="msg_load_more">Load more stories…</string>
 

@@ -49,7 +49,7 @@ import android.widget.TextView;
  *         including the PlaylistView.
  */
 public abstract class RootActivity extends Activity implements
-  Trackable, Refreshable, OnClickListener {
+  Refreshable, OnClickListener {
   private static final String LOG_TAG = RootActivity.class.getName();
   private NavigationView navigationView;
   private PlaylistView playlistView;
@@ -89,8 +89,6 @@ public abstract class RootActivity extends Activity implements
 
     progressIndicator =
         (ProgressBar) findViewById(R.id.WindowProgressIndicator);
-
-    trackNow();
 
     // Initializes the crittercism library
     /*Crittercism.init(getApplicationContext(),
@@ -156,10 +154,6 @@ public abstract class RootActivity extends Activity implements
 
   @Override
   public void refresh() {
-  }
-
-  @Override
-  public void trackNow() {
   }
 
   @Override

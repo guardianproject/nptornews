@@ -15,12 +15,17 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.impl.client.DefaultHttpClient;
+
+import info.guardianproject.onionkit.trust.StrongHttpsClient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +37,8 @@ public class HttpHelper {
 
   private static final String LOG_TAG = HttpHelper.class.getName();
 
+  public static String proxyHost = "localhost";
+  public static int proxyPort = 8118;
   /**
    * A helper function to grab content from a URL.
    *
@@ -41,10 +48,14 @@ public class HttpHelper {
    * closing the stream. Content will be null in the case of errors.
    * @throws java.io.IOException if an error occurs loading the url
    */
-  public static InputStream download(String url) throws IOException {
+  public static InputStream download(String url, Context context) throws IOException {
     InputStream data = null;
     Log.d(LOG_TAG, "Starting download: " + url);
-    HttpClient http = new DefaultHttpClient();
+    HttpClient http = new StrongHttpsClient(context);
+    
+    if (proxyHost != null)
+    	http.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY,  new HttpHost(proxyHost, proxyPort));
+
     HttpGet method = new HttpGet(url);
 
     try {

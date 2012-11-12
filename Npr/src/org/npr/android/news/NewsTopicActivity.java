@@ -30,8 +30,6 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import org.npr.android.util.Tracker;
-import org.npr.android.util.Tracker.ActivityMeasurement;
 import org.npr.api.ApiConstants;
 import org.npr.api.StoryGrouping;
 import org.npr.api.Topic;
@@ -71,7 +69,7 @@ public class NewsTopicActivity extends TitleActivity implements
 
   private int constructList() {
     List<? extends StoryGrouping> groupings =
-        Topic.factory.downloadStoryGroupings(-1);
+        Topic.factory.downloadStoryGroupings(-1, this);
     ArrayList<Topic> filteredList =
         new ArrayList<Topic>(selectedTopics.length);
     for (int i : selectedTopics) {
@@ -118,13 +116,7 @@ public class NewsTopicActivity extends TitleActivity implements
     return getString(R.string.msg_main_title_topics);
   }
 
-  @Override
-  public void trackNow() {
-    StringBuilder pageName = new StringBuilder("News");
-    Tracker.instance(getApplication()).trackPage(
-        new ActivityMeasurement(pageName.toString(), "News"));
-  }
-
+ 
   @Override
   public boolean isRefreshable() {
     return true;

@@ -91,7 +91,7 @@ public class IPhoneTimersConfProvider extends ContentProvider {
      */
     private boolean load() {
         try {
-            InputStream stream = HttpHelper.download(CONF_URL);
+            InputStream stream = HttpHelper.download(CONF_URL, getContext());
             if (stream == null) {
                 return false;
             }

@@ -15,6 +15,8 @@
 
 package org.npr.android.util;
 
+import android.content.Context;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -119,11 +121,11 @@ public class Program {
     private static final String programURL =
         "http://www.npr.org/services/apps/iphone/news/programs.json";
 
-    public List<Program> downloadPrograms() throws IOException {
+    public List<Program> downloadPrograms(Context context) throws IOException {
 
       ArrayList<Program> listPrograms = new ArrayList<Program>();
       
-      InputStream json = HttpHelper.download(programURL);
+      InputStream json = HttpHelper.download(programURL, context);
 
       JsonFactory jsonFactory = new JsonFactory();
       JsonParser parser = jsonFactory.createJsonParser(json);

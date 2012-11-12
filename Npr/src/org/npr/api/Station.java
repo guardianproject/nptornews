@@ -15,6 +15,7 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.apache.http.client.ClientProtocolException;
@@ -384,7 +385,7 @@ public class Station {
       return sb.build();
     }
 
-    public static Station downloadStation(String stationId) {
+    public static Station downloadStation(String stationId, Context context) {
       Log.d(LOG_TAG, "downloading station: " + stationId);
       Map<String, String> params = new HashMap<String, String>();
       params.put(ApiConstants.PARAM_ID, stationId);
@@ -393,7 +394,7 @@ public class Station {
 
       Node stations = null;
       try {
-        stations = new Client(url).execute();
+        stations = new Client(url, context).execute();
       } catch (ClientProtocolException e) {
         Log.e(LOG_TAG, "", e);
       } catch (IOException e) {

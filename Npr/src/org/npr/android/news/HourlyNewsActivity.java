@@ -25,7 +25,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.npr.android.util.Tracker;
 import org.npr.api.Podcast;
 
 import java.text.ParseException;
@@ -93,7 +92,7 @@ public class HourlyNewsActivity extends RootActivity implements
         try {
           final String hourlyUrlCall =
               "http://www.npr.org/rss/podcast.php?id=500005";
-          podcast = Podcast.PodcastFactory.downloadPodcast(hourlyUrlCall);
+          podcast = Podcast.PodcastFactory.downloadPodcast(hourlyUrlCall, HourlyNewsActivity.this);
           List<Podcast.Item> items = podcast.getItems();
 
           // The hourly podcast has only one item
@@ -130,13 +129,4 @@ public class HourlyNewsActivity extends RootActivity implements
     }
   }
 
-  @Override
-  public void trackNow() {
-    // hourly newscast tracking
-    StringBuilder pageName = new StringBuilder(
-        getString(R.string.msg_main_subactivity_hourly));
-      Tracker.instance(getApplication()).trackPage(
-          new Tracker.ActivityMeasurement(pageName.toString(), "Newscast"));
-
-  }
 }

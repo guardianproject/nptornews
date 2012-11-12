@@ -26,8 +26,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
 
-import org.npr.android.util.Tracker;
-import org.npr.android.util.Tracker.SearchResultsMeasurement;
 import org.npr.api.ApiConstants;
 
 import java.text.SimpleDateFormat;
@@ -145,30 +143,5 @@ public class SearchResultsActivity extends NewsListActivity implements
     return getString(R.string.msg_search_results_title);
   }
 
-  @Override
-  public void trackNow() {
-    if (listAdapter == null) {
-      // Hacky, but works.
-      Thread trackerThread = new Thread(new Runnable() {
-        @Override
-        public void run() {
-          try {
-            Thread.sleep(500);
-          } catch (InterruptedException ignored) { }
-          trackNow();
-        }
-      });
-      trackerThread.start();
-      return;
-    }
-    
-    StringBuilder pageName =
-        new StringBuilder("Search").append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append("Results");
-    int resultsCount = listAdapter.isEmpty() ? 0 : listAdapter.getCount();
-    Tracker.instance(getApplication()).trackPage(
-        new SearchResultsMeasurement(pageName.toString(),
-        "Search", query, resultsCount));
-  }
 
 }

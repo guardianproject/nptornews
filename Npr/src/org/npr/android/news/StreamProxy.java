@@ -18,6 +18,7 @@ package org.npr.android.news;
 import android.util.Log;
 
 import org.apache.http.Header;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpResponseFactory;
@@ -25,9 +26,11 @@ import org.apache.http.ParseException;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.ClientConnectionOperator;
 import org.apache.http.conn.OperatedClientConnection;
+import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
@@ -46,6 +49,10 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.CharArrayBuffer;
 
+import info.guardianproject.onionkit.trust.StrongHttpsClient;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,6 +77,10 @@ public class StreamProxy implements Runnable {
   private ServerSocket socket;
   private Thread thread;
 
+  private String proxyHost = "localhost";
+  private int proxyPort = 8118;
+  
+  
   public void init() {
     try {
       socket = new ServerSocket(port, 0, InetAddress.getByAddress(new byte[] {127,0,0,1}));
@@ -117,6 +128,8 @@ public class StreamProxy implements Runnable {
         if (client == null) {
           continue;
         }
+        client.setSoTimeout(0);
+        socket.setSoTimeout(0);
         Log.d(LOG_TAG, "client connected");
         HttpRequest request = readRequest(client);
         processRequest(request, client);
@@ -159,13 +172,21 @@ public class StreamProxy implements Runnable {
   }
 
   private HttpResponse download(String url) {
+	  
     DefaultHttpClient seed = new DefaultHttpClient();
+    
+    
     SchemeRegistry registry = new SchemeRegistry();
     registry.register(
             new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
     SingleClientConnManager mgr = new MyClientConnManager(seed.getParams(),
         registry);
+    
     DefaultHttpClient http = new DefaultHttpClient(mgr, seed.getParams());
+    if (proxyHost != null)
+    	http.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY,  new HttpHost(proxyHost, proxyPort));
+    
+    
     HttpGet method = new HttpGet(url);
     HttpResponse response = null;
     try {
@@ -194,7 +215,7 @@ public class StreamProxy implements Runnable {
 
     Log.d(LOG_TAG, "downloading...");
 
-    InputStream data = realResponse.getEntity().getContent();
+    BufferedInputStream data = new BufferedInputStream(realResponse.getEntity().getContent());
     StatusLine line = realResponse.getStatusLine();
     HttpResponse response = new BasicHttpResponse(line);
     response.setHeaders(realResponse.getAllHeaders());
@@ -214,13 +235,15 @@ public class StreamProxy implements Runnable {
     try {
       byte[] buffer = httpString.toString().getBytes();
       int readBytes;
-      Log.d(LOG_TAG, "writing to client");
-      client.getOutputStream().write(buffer, 0, buffer.length);
+      Log.d(LOG_TAG, "writing to client");      
+      
+      BufferedOutputStream bos = new BufferedOutputStream(client.getOutputStream());            
+      bos.write(buffer, 0, buffer.length);
 
       // Start streaming content.
       byte[] buff = new byte[1024 * 50];
       while (isRunning && (readBytes = data.read(buff, 0, buff.length)) != -1) {
-        client.getOutputStream().write(buff, 0, readBytes);
+    	  bos.write(buff, 0, readBytes);
       }
     } catch (Exception e) {
       Log.e("", e.getMessage(), e);

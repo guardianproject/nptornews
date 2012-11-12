@@ -28,7 +28,6 @@ import org.npr.android.util.M3uParser;
 import org.npr.android.util.PlaylistParser;
 import org.npr.android.util.PlaylistRepository;
 import org.npr.android.util.PlsParser;
-import org.npr.android.util.Tracker;
 
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -407,7 +406,7 @@ public class PlaybackService extends Service implements
     String playUrl = url;
     // From 2.2 on (SDK ver 8), the local mediaplayer can handle Shoutcast
     // streams natively. Let's detect that, and not proxy.
-    if (stream && Build.VERSION.SDK_INT < 8) {
+   // if (stream && Build.VERSION.SDK_INT < 8) {
       if (proxy == null) {
         proxy = new StreamProxy();
         proxy.init();
@@ -415,7 +414,7 @@ public class PlaybackService extends Service implements
       }
       playUrl = String.format("http://127.0.0.1:%d/%s",
           proxy.getPort(), url);
-    }
+    //}
 
     // We only have to mark an item read on playlist items,
     // so set markedRead to false only when a playlist entry
@@ -457,10 +456,6 @@ public class PlaybackService extends Service implements
     lastChangeBroadcast.putExtra(Playable.PLAYABLE_TYPE, currentPlayable);
     getApplicationContext().sendStickyBroadcast(lastChangeBroadcast);
 
-    if (currentPlayable != null && currentPlayable.getUrl() != null) {
-      Tracker.PlayEvent e = new Tracker.PlayEvent(currentPlayable.getUrl());
-      Tracker.instance(getApplication()).trackLink(e);
-    }
   }
   
   private void presentPlayingNotification()
@@ -522,10 +517,6 @@ public class PlaybackService extends Service implements
     
     stopForeground( true );
 
-    if (currentPlayable != null) {
-      Tracker.PauseEvent e = new Tracker.PauseEvent(currentPlayable.getUrl());
-      Tracker.instance(getApplication()).trackLink(e);
-    }
   }
 
   synchronized private void stop() {
@@ -695,11 +686,7 @@ public class PlaybackService extends Service implements
     }
 
     seekToPosition = 0;
-    if (currentPlayable != null) {
-      Tracker.StopEvent e = new Tracker.StopEvent(currentPlayable.getUrl());
-      Tracker.instance(getApplication()).trackLink(e);
-    }
-
+  
     // Unfinished playlist
     if (playlistUrls != null && playlistUrls.size() > 0) {
       boolean successfulPlay = false;

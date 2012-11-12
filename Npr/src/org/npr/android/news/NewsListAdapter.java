@@ -215,7 +215,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
 
     Node stories = null;
     try {
-      stories = new Client(url).execute();
+      stories = new Client(url, getContext()).execute();
     } catch (IOException e) {
       Log.e(LOG_TAG, "", e);
       return false;
@@ -239,7 +239,7 @@ public class NewsListAdapter extends ArrayAdapter<Story> {
         for (Story story : moreStories) {
           for (Story.Parent parent : story.getParents()) {
             if (parent.getType().equals("book")) {
-              List<Book> books = Book.downloadBooks(parent.getApiLink(), story.getId());
+              List<Book> books = Book.downloadBooks(parent.getApiLink(), story.getId(),getContext());
               if (books != null) {
                 NewsListActivity.addBooksToCache(story.getId(), books);
               }

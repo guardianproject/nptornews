@@ -14,6 +14,7 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -41,8 +42,8 @@ public class PublicBroadcastingClient {
    * @return an array of id Integers.
    * @throws java.io.IOException if it can't load the list
    */
-  public static Integer[] getNowPlayingIds() throws IOException {
-    InputStream data = HttpHelper.download(nowPlayingURL);
+  public static Integer[] getNowPlayingIds(Context context) throws IOException {
+    InputStream data = HttpHelper.download(nowPlayingURL, context);
     if (data == null) {
       Log.d(LOG_TAG, "No programs currently on air anywhere");
       return new Integer[0];

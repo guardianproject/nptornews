@@ -32,7 +32,6 @@ import android.view.animation.AnimationUtils;
 import android.widget.*;
 import android.widget.AdapterView.OnItemClickListener;
 import org.npr.android.util.*;
-import org.npr.android.util.Tracker.StoryListMeasurement;
 import org.npr.api.ApiConstants;
 import org.npr.api.Book;
 import org.npr.api.Story;
@@ -52,7 +51,6 @@ public class NewsListActivity extends TitleActivity implements
 
   protected NewsListAdapter listAdapter;
   private ListView listView;
-  protected BannerView bannerView;
 
   private static final Map<String, Story> storyCache = new HashMap<String, Story>();
   private static final Map<String, List<Book>> bookCache =
@@ -141,10 +139,10 @@ public class NewsListActivity extends TitleActivity implements
     }
   };
 
-  public static Story getStoryFromCache(String storyId) {
+  public static Story getStoryFromCache(String storyId, Context context) {
     Story result = storyCache.get(storyId);
     if (result == null) {
-      result = Story.StoryFactory.downloadStory(storyId);
+      result = Story.StoryFactory.downloadStory(storyId, context);
       storyCache.put(storyId, result);
     }
     return result;
@@ -192,11 +190,11 @@ public class NewsListActivity extends TitleActivity implements
     titleText.setTextColor(getResources().getColor(R.color.news_title_text));
     TextView titleRight = (TextView) findViewById(R.id.TitleRight);
     titleRight.setTextColor(getResources().getColor(R.color.news_title_text));
-
+    /*
     ViewGroup bannerHolder = (ViewGroup) findViewById(R.id.SponsorshipBanner);
     ViewGroup.inflate(this, R.layout.banner, bannerHolder);
     bannerView = (BannerView) bannerHolder.getChildAt(0);
-    bannerView.setPlayerView(getPlaylistView());
+    bannerView.setPlayerView(getPlaylistView());*/
 
     ViewGroup container = (ViewGroup) findViewById(R.id.Content);
     ViewGroup.inflate(this, R.layout.news, container);
@@ -244,7 +242,6 @@ public class NewsListActivity extends TitleActivity implements
   private NewsListAdapter.StoriesLoadedListener listener = new NewsListAdapter.StoriesLoadedListener() {
     @Override
     public void storiesLoaded() {
-      bannerView.startCloseTimer();
       stopIndeterminateProgressIndicator();
       stopStoryLoadProgressIndicator();
     }
@@ -265,7 +262,6 @@ public class NewsListActivity extends TitleActivity implements
       playlistChangedReceiver = null;
     }
     handler.removeCallbacks(updateTime);
-    bannerView.cancelUpdates();
     super.onStop();
   }
 
@@ -321,7 +317,6 @@ public class NewsListActivity extends TitleActivity implements
       return;
     }
 
-    Tracker.LinkEvent e;
     PlaylistRepository playlistRepository =
         new PlaylistRepository(getApplicationContext(), getContentResolver());
     if (playNow) {
@@ -335,13 +330,11 @@ public class NewsListActivity extends TitleActivity implements
       }
       PlaylistEntry entry = playlistRepository.getPlaylistItemFromId(playlistId);
       this.playEntryNow(entry);
-      e = new Tracker.PlayEvent(url);
+    
     } else {
       playlistRepository.add(story);
-      e = new Tracker.AddToPlaylistEvent(url);
     }
 
-    Tracker.instance(getApplication()).trackLink(e);
   }
 
 
@@ -490,15 +483,7 @@ public class NewsListActivity extends TitleActivity implements
   }
 
 
-  @Override
-  public void trackNow() {
-    StringBuilder pageName =
-        new StringBuilder("News").append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append(grouping).append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append(description);
-    Tracker.instance(getApplication()).trackPage(
-        new StoryListMeasurement(pageName.toString(), "News", topicId));
-  }
+ 
 
   @Override
   public boolean isRefreshable() {

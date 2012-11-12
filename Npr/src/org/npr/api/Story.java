@@ -15,6 +15,7 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.apache.http.client.ClientProtocolException;
@@ -1095,7 +1096,7 @@ public class Story extends ApiElement {
       return new Audio.Format(mp3, wm, rm);
     }
 
-    public static Story downloadStory(String storyId) {
+    public static Story downloadStory(String storyId, Context context) {
       Log.d(LOG_TAG, "downloading story: " + storyId);
       Map<String, String> params = new HashMap<String, String>();
       params.put(ApiConstants.PARAM_ID, storyId);
@@ -1104,7 +1105,7 @@ public class Story extends ApiElement {
 
       Node stories = null;
       try {
-        stories = new Client(url).execute();
+        stories = new Client(url, context).execute();
       } catch (ClientProtocolException e) {
         Log.e(LOG_TAG, "", e);
       } catch (IOException e) {

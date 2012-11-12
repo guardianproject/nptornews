@@ -21,7 +21,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 
 import org.npr.android.util.PlaylistRepository;
-import org.npr.android.util.Tracker;
 import org.npr.api.ApiConstants;
 import org.npr.api.Story;
 
@@ -86,9 +85,7 @@ public class ProgramStoryListActivity extends NewsListActivity {
           if (story != null &&
               listAdapter.isPlayable(story)) {
             playlistRepository.add(story);
-            Tracker.LinkEvent e =
-                new Tracker.AddToPlaylistEvent(story.getPlayableUrl());
-            Tracker.instance(getApplication()).trackLink(e);
+           
           }
         }
       }

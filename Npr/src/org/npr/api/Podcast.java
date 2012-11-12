@@ -14,6 +14,7 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.apache.http.client.ClientProtocolException;
@@ -200,12 +201,12 @@ public class Podcast {
       return new Item(title, pubDate, guid, url, duration);
     }
 
-    public static Podcast downloadPodcast(String url) {
+    public static Podcast downloadPodcast(String url, Context context) {
       Log.d(LOG_TAG, "downloading podcast: " + url);
 
       Node podcasts = null;
       try {
-        podcasts = new Client(url).execute();
+        podcasts = new Client(url, context).execute();
       } catch (ClientProtocolException e) {
         Log.e(LOG_TAG, "", e);
       } catch (IOException e) {

@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 public class ApiConstants {
   private static final String LOG_TAG = ApiConstants.class.getName();
   // Main URL
-  public static final String URL = "http://api.npr.org";
+  public static final String URL = "https://api.npr.org";
 
   // Various endpoints of the api
   public static final String STATIONS_PATH = "stations";

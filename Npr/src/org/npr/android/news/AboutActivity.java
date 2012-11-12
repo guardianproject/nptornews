@@ -28,8 +28,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
-import org.npr.android.util.Tracker;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -147,9 +145,4 @@ public class AboutActivity extends TitleActivity implements OnClickListener {
     return version;
   }
 
-  @Override
-  public void trackNow() {
-    Tracker.instance(getApplication()).trackPage(new Tracker
-        .ActivityMeasurement(getMainTitle().toString(), ""));
-  }
 }

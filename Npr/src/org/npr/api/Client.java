@@ -15,6 +15,7 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.apache.http.client.ClientProtocolException;
@@ -35,9 +36,11 @@ import java.io.InputStream;
 public class Client {
   private static final String LOG_TAG = Client.class.getName();
   private final String url;
-
-  public Client(String url) {
+  private Context context;
+  
+  public Client(String url, Context context) {
     this.url = url;
+    this.context = context;
   }
 
   public Node execute() throws ClientProtocolException, IOException,
@@ -74,7 +77,7 @@ public class Client {
 
 
   protected InputStream download() throws IOException {
-    return HttpHelper.download(url);
+    return HttpHelper.download(url, context);
   }
 
 }

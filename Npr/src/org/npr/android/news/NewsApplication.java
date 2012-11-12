@@ -25,7 +25,6 @@ import android.os.Message;
 import android.util.Log;
 
 import org.npr.android.util.FileUtils;
-import org.npr.android.util.Tracker;
 import org.npr.api.ApiConstants;
 
 import java.util.ArrayList;
@@ -74,7 +73,6 @@ public class NewsApplication extends Application {
   @Override
   public void onTerminate() {
     super.onTerminate();
-    Tracker.instance(this).finish();
     cancelLocationListeners();
   }
 

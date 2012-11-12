@@ -64,16 +64,10 @@
         android:contentDescription="@string/acd_search_button"/>
   </LinearLayout>
   <FrameLayout
-    android:id="@+id/SponsorshipBanner"
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content"
-    android:layout_alignParentBottom="true"/>
-  <FrameLayout
     android:id="@+id/TitleContent"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:layout_below="@id/LogoBar"
-    android:layout_above="@id/SponsorshipBanner">
+    android:layout_below="@id/LogoBar">
   </FrameLayout>
   <ProgressBar
       android:id="@+id/WindowProgressIndicator"

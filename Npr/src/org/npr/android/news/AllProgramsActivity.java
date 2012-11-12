@@ -32,7 +32,6 @@ import android.widget.Toast;
 import org.npr.android.util.ArrayUtils;
 import org.npr.android.util.DisplayUtils;
 import org.npr.android.util.Program;
-import org.npr.android.util.Tracker;
 import org.npr.api.ApiConstants;
 import org.npr.api.PublicBroadcastingClient;
 
@@ -70,9 +69,9 @@ public class AllProgramsActivity extends TitleActivity implements
   @SuppressWarnings("unchecked")
   protected int constructList() {
     try {
-      nowPlayingIDs = PublicBroadcastingClient.getNowPlayingIds();
+      nowPlayingIDs = PublicBroadcastingClient.getNowPlayingIds(this);
 
-      List<Program> programs = new Program.ProgramFactory().downloadPrograms();
+      List<Program> programs = new Program.ProgramFactory().downloadPrograms(this);
       listAdapter = new ProgramListAdapter(categorizePrograms(programs));
 
       if (programs != null) {
@@ -116,14 +115,6 @@ public class AllProgramsActivity extends TitleActivity implements
   public CharSequence getMainTitle() {
     return getString(R.string.msg_main_subactivity_programs);
   }
-
-  @Override
-  public void trackNow() {
-    StringBuilder pageName = new StringBuilder("All Programs");
-    Tracker.instance(getApplication()).trackPage(
-        new Tracker.ActivityMeasurement(pageName.toString(), "News"));
-  }
-
 
   @Override
   public void onItemClick(AdapterView<?> parent, View view, int position,

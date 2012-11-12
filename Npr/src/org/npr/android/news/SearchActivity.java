@@ -30,9 +30,6 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageButton;
 
-import org.npr.android.util.Tracker;
-import org.npr.android.util.Tracker.ActivityMeasurement;
-
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -153,14 +150,6 @@ public class SearchActivity extends TitleActivity implements
   @Override
   public CharSequence getMainTitle() {
     return getString(R.string.msg_main_subactivity_search);
-  }
-
-  @Override
-  public void trackNow() {
-    StringBuilder pageName = new StringBuilder("Search").append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append("Search Form");
-    Tracker.instance(getApplication()).trackPage(
-        new ActivityMeasurement(pageName.toString(), "Search"));
   }
 
   @Override

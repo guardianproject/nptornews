@@ -1,5 +1,6 @@
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 import org.apache.http.client.ClientProtocolException;
 import org.npr.android.util.NodeUtils;
@@ -149,13 +150,13 @@ public class Book extends ApiElement {
     return null;
   }
 
-  public static List<Book> downloadBooks(String url, String storyId) {
+  public static List<Book> downloadBooks(String url, String storyId, Context context) {
     if (url == null || storyId == null)
       return null;
 
     Node books = null;
     try {
-      books = new Client(url).execute();
+      books = new Client(url, context).execute();
     } catch (ClientProtocolException e) {
       Log.e(LOG_TAG, "", e);
     } catch (IOException e) {

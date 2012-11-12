@@ -65,7 +65,7 @@ public class StationListAdapter extends ArrayAdapter<Station> {
 
     Node stations = null;
     try {
-      stations = new Client(url).execute();
+      stations = new Client(url, getContext()).execute();
     } catch (ClientProtocolException e) {
       Log.e(LOG_TAG, "", e);
     } catch (IOException e) {
@@ -83,7 +83,7 @@ public class StationListAdapter extends ArrayAdapter<Station> {
     Log.d(LOG_TAG, "stations: " + stations.getNodeName());
 
     data = StationFactory.parseStations(stations);
-    StationCache.addAll(data);
+    StationCache.addAll(data, getContext());
     return 0;
   }
 

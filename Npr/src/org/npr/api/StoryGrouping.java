@@ -2,6 +2,7 @@
 
 package org.npr.api;
 
+import android.content.Context;
 import android.util.Log;
 
 import org.apache.http.client.ClientProtocolException;
@@ -170,7 +171,7 @@ public abstract class StoryGrouping extends ApiElement implements
       return (T) sb.build();
     }
 
-    public List<T> downloadStoryGroupings(int count) {
+    public List<T> downloadStoryGroupings(int count, Context context) {
       Log.d(LOG_TAG, "downloading StoryGroupings");
       Map<String, String> params = new HashMap<String, String>();
       params.put(ApiConstants.PARAM_ID, groupingType);
@@ -179,7 +180,7 @@ public abstract class StoryGrouping extends ApiElement implements
 
       Node storyGroupings = null;
       try {
-        storyGroupings = new Client(url).execute();
+        storyGroupings = new Client(url, context).execute();
       } catch (ClientProtocolException e) {
         Log.e(LOG_TAG, "", e);
       } catch (IOException e) {

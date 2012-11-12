@@ -30,8 +30,6 @@ import android.widget.*;
 import org.npr.android.util.DisplayUtils;
 import org.npr.android.util.FavoriteStationsProvider;
 import org.npr.android.util.StationCache;
-import org.npr.android.util.Tracker;
-import org.npr.android.util.Tracker.StationDetailsMeasurement;
 import org.npr.api.Station;
 import org.npr.api.Station.AudioStream;
 import org.npr.api.Station.Podcast;
@@ -212,7 +210,7 @@ public class StationDetailsActivity extends RootActivity implements
   
   private void setupStation()
   {
-    station = StationCache.getStation(stationId);
+    station = StationCache.getStation(stationId, this);
 
     String selection = FavoriteStationsProvider.Items.STATION_ID + " = ?";
     String[] selectionArgs = new String[1];
@@ -322,12 +320,4 @@ public class StationDetailsActivity extends RootActivity implements
     }
   }
 
-  @Override
-  public void trackNow() {
-    StringBuilder pageName = new StringBuilder("Stations").append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append(station == null ? "" : station.getName());
-    Tracker.instance(getApplication()).trackPage(
-        new StationDetailsMeasurement(pageName.toString(), "Stations",
-            stationId));
-  }
 }

@@ -120,5 +120,11 @@
     <!-- declare the default searchable Activity for the whole app -->
     <meta-data android:name="android.app.default_searchable"
                android:value=".SearchResultsActivity"/>
+    
+     <activity android:name="info.guardianproject.onionkit.ui.CertDisplayActivity"
+            android:configChanges="locale|screenSize|orientation"
+         	android:theme="@android:style/Theme.Dialog"
+         	 android:taskAffinity=""
+            />
   </application>
 </manifest>

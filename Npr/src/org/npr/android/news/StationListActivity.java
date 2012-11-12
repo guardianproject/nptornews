@@ -23,8 +23,6 @@ import org.npr.android.util.FavoriteStationEntry;
 import org.npr.android.util.FavoriteStationsProvider;
 import org.npr.android.util.FavoriteStationsRepository;
 import org.npr.android.util.StationCache;
-import org.npr.android.util.Tracker;
-import org.npr.android.util.Tracker.StationListMeasurement;
 import org.npr.api.ApiConstants;
 import org.npr.api.Station;
 
@@ -190,7 +188,6 @@ public class StationListActivity extends TitleActivity implements
     });
     initializeList();
     query = "Favorites";
-    trackNow();
   }
 
   /**
@@ -209,7 +206,6 @@ public class StationListActivity extends TitleActivity implements
       });
       initializeList();
     }
-    trackNow();
   }
 
   /**
@@ -300,7 +296,6 @@ public class StationListActivity extends TitleActivity implements
         ApiConstants.STATIONS_PATH,
         params
     ));
-    trackNow();
   }
 
   @Override
@@ -441,17 +436,5 @@ public class StationListActivity extends TitleActivity implements
     return getString(helpId);
   }
 
-  @Override
-  public void trackNow() {
-    if (query == null) {
-      return;
-    }
-
-    StringBuilder pageName =
-        new StringBuilder("Stations").append(Tracker.PAGE_NAME_SEPARATOR);
-    pageName.append("Search Results");
-
-    Tracker.instance(getApplication()).trackPage(
-        new StationListMeasurement(pageName.toString(), "Stations", query));
-  }
+  
 }

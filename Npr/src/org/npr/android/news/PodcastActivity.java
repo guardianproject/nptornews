@@ -220,7 +220,7 @@ public class PodcastActivity extends RootActivity implements
     new Thread(new Runnable() {
       @Override
       public void run() {
-        podcast = PodcastFactory.downloadPodcast(url);
+        podcast = PodcastFactory.downloadPodcast(url, PodcastActivity.this);
         handler.sendEmptyMessage(0);
       }
     }).start();
